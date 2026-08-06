@@ -38,7 +38,8 @@ from dataclasses import dataclass, field
 from meturgaman import hebrew
 from meturgaman.sources.sefaria import Observation, Reading
 
-__all__ = ["Difference", "Comparison", "compare", "SUBSTANTIVE", "ABBREVIATION", "INTERPOLATION"]
+__all__ = ["Difference", "Apparatus", "Comparison", "compare",
+           "SUBSTANTIVE", "ABBREVIATION", "INTERPOLATION"]
 
 SUBSTANTIVE = "substantive"
 ABBREVIATION = "abbreviation"
@@ -68,6 +69,24 @@ class Difference:
         return f"[{self.kind}] {self.left!r} / {self.right!r}"
 
 
+@dataclass(frozen=True)
+class Apparatus:
+    """A difference that is not a variant reading.
+
+    Recorded rather than reported as a dispute. To a reader studying
+    vocalization this is the interesting content; to a reader quoting the
+    consonantal text it is noise. Keeping it labelled serves both, where
+    discarding it serves only the second.
+    """
+
+    edition: str
+    provider: str
+    vocalization: str
+
+    def __str__(self) -> str:
+        return f"{self.edition} ({self.provider}): {self.vocalization}"
+
+
 @dataclass
 class Comparison:
     """Every edition of a passage, and where they part company."""
@@ -76,6 +95,8 @@ class Comparison:
     editions: list[str] = field(default_factory=list)
     differences: list[Difference] = field(default_factory=list)
     independent_witnesses: int = 0
+    #: How each edition points the text. Not a disagreement, but worth having.
+    apparatus: list[Apparatus] = field(default_factory=list)
 
     @property
     def substantive(self) -> list[Difference]:
@@ -111,6 +132,7 @@ class Comparison:
                 "  The consonantal text agrees everywhere. Differences in "
                 "vowels and cantillation are apparatus, not variants."
             )
+            lines.extend(f"  apparatus: {item}" for item in self.apparatus)
             return "\n".join(lines)
 
         counts: dict[str, int] = {}
@@ -182,6 +204,15 @@ def compare(reading: Reading, *, language: str = "he") -> Comparison:
             {observation.edition.provider for observation in observations}
         ),
     )
+
+    for observation in observations:
+        comparison.apparatus.append(
+            Apparatus(
+                edition=observation.edition.title,
+                provider=observation.edition.provider,
+                vocalization=hebrew.describe_vocalization(observation.joined),
+            )
+        )
 
     if len(observations) < 2:
         comparison.nothing_compared = True

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 from datetime import date
 
 from meturgaman import __version__
@@ -100,6 +101,7 @@ def _study(arguments) -> int:
     rendered = {
         "block": markdown.block,
         "teaching": markdown.teaching,
+        "interlinear": markdown.interlinear,
         "file": markdown.study_file,
     }[arguments.tier](reading, scheme=arguments.scheme)
     print(rendered.text)
@@ -377,7 +379,10 @@ def _audio(arguments) -> int:
             print(f"  {recording}")
             print(f"      {recording.attribution}")
             if arguments.download:
-                target = audio.Path(arguments.download)
+                # One path per recording, so several do not overwrite each other.
+                target = Path(arguments.download)
+                if target.is_dir() or len(found) > 1:
+                    target = Path(arguments.download) / Path(recording.url).name
                 print(f"      saved to {recording.download(target)}")
     elif not spoken:
         print(
@@ -451,7 +456,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     study = commands.add_parser("study", help="render a passage as markdown")
     study.add_argument("citation")
-    study.add_argument("--tier", default="teaching", choices=("block", "teaching", "file"))
+    study.add_argument("--tier", default="teaching", choices=("block", "teaching", "interlinear", "file"))
     study.add_argument("--scheme", default=None, help=scheme_help)
     study.add_argument("--quiet", action="store_true")
     study.set_defaults(handler=_study)

@@ -26,7 +26,8 @@ from meturgaman.romanize.engine import romanize
 from meturgaman.scheme import Scheme
 from meturgaman.sources.sefaria import Reading
 
-__all__ = ["block", "teaching", "inline", "study_file", "Rendered"]
+__all__ = ["block", "teaching", "interlinear", "inline", "study_file",
+           "filename_for", "write", "Rendered"]
 
 
 @dataclass
@@ -56,7 +57,13 @@ def _hebrew_and_translation(reading: Reading) -> tuple[str, str, str, str]:
 
 
 def block(reading: Reading, *, scheme: Scheme | str | None = None) -> Rendered:
-    """Tier 1: a long quotation, for an article."""
+    """Tier 1: a long quotation, for an article.
+
+    `scheme` is accepted and unused: a tier-1 quotation carries no romanization
+    line by design, so there is nothing for a scheme to govern. It is in the
+    signature so every tier takes the same arguments, and the flag below says
+    the option had no effect rather than leaving it to be inferred.
+    """
     text, edition, english, english_edition = _hebrew_and_translation(reading)
     if not text:
         raise ValueError(f"no Hebrew found for {reading.ref.normalized}")
@@ -71,7 +78,13 @@ def block(reading: Reading, *, scheme: Scheme | str | None = None) -> Rendered:
         citation += f"; translation, {english_edition}"
     lines.append(citation)
 
-    return Rendered(text="\n".join(lines), flags=[])
+    flags = []
+    if scheme is not None:
+        flags.append(
+            "[scheme-unused] a tier-1 quotation has no romanization line, so "
+            "the scheme had no effect here"
+        )
+    return Rendered(text="\n".join(lines), flags=flags)
 
 
 def teaching(
@@ -99,6 +112,37 @@ def teaching(
     return Rendered(text="\n".join(lines), flags=[str(flag) for flag in romanized.flags])
 
 
+def interlinear(
+    reading: Reading, *, scheme: Scheme | str | None = None
+) -> Rendered:
+    """Tier 2-Parse: one line per word, for a phrase that rewards parsing.
+
+    Each line is a word, its romanization, and room for a gloss. What goes in a
+    close reading where the point is how the phrase is built rather than what it
+    says.
+
+        > פָּנִים — panim
+        > בְּפָנִים — be-fanim
+    """
+    text, edition, _english, _english_edition = _hebrew_and_translation(reading)
+    if not text:
+        raise ValueError(f"no Hebrew found for {reading.ref.normalized}")
+
+    flags: list[str] = []
+    lines: list[str] = []
+    for word in text.split():
+        romanized = romanize(word, scheme)
+        flags.extend(str(flag) for flag in romanized.flags)
+        lines.append(f"> {word} — *{romanized.text}*")
+
+    lines.append("")
+    footer = reading.ref.normalized
+    if edition:
+        footer += f" ({edition})"
+    lines.append(footer)
+    return Rendered(text="\n".join(lines), flags=flags)
+
+
 def inline(
     text: str, translation: str = "", *, scheme: Scheme | str | None = None
 ) -> Rendered:
@@ -109,6 +153,37 @@ def inline(
         gloss += f", {translation}"
     gloss += ")"
     return Rendered(text=gloss, flags=[str(flag) for flag in romanized.flags])
+
+
+#: Characters a filesystem will not take, and what to put instead.
+_UNSAFE = {"/": "-", ":": ".", "\\": "-", "?": "", "*": "", "<": "", ">": "",
+           "|": "-", '"': "'"}
+
+
+def filename_for(reading: Reading, extension: str = ".md") -> str:
+    """A stable filename for a passage, derived from its normalized reference.
+
+    From the normalized form rather than what the caller typed, so a passage
+    asked for two ways writes one file rather than two.
+    """
+    name = reading.ref.normalized
+    for bad, good in _UNSAFE.items():
+        name = name.replace(bad, good)
+    return " ".join(name.split()) + extension
+
+
+def write(rendered: Rendered, destination) -> "Path":
+    """Write rendered markdown to a file, creating the directory if needed."""
+    from pathlib import Path
+
+    path = Path(destination)
+    if path.is_dir():
+        raise IsADirectoryError(
+            f"{path} is a directory; give a file path, or use filename_for()"
+        )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(rendered.text + "\n", encoding="utf-8")
+    return path
 
 
 def study_file(
