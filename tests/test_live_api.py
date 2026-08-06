@@ -298,3 +298,22 @@ def test_the_talmud_has_no_recordings_and_says_so():
     except Exception as error:
         _skip_on_network_trouble(error)
     assert found == []
+
+
+def test_find_refs_returns_the_citations_it_finds():
+    """The endpoint became asynchronous and the reader did not notice.
+
+    It answered with a task id, the code read that as though it held results,
+    and the feature reported "no citations found" for every input with a
+    success exit code. Nothing in the suite covered it.
+    """
+    from meturgaman.sources import sefaria
+
+    try:
+        found = sefaria.find_refs("See Genesis 1:1 and also Berakhot 2a.")
+    except Exception as error:
+        _skip_on_network_trouble(error)
+
+    refs = [ref for entry in found for ref in (entry.get("refs") or [])]
+    assert "Genesis 1:1" in refs, refs
+    assert "Berakhot 2a" in refs, refs

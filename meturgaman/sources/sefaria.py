@@ -637,11 +637,54 @@ def find_refs(text: str) -> list[dict[str, Any]]:
         limiter=_LIMIT,
         service="sefaria",
         attribution=ATTRIBUTION,
+        use_cache=False,
     ).payload
     if not isinstance(payload, dict):
         return []
-    results = payload.get("body", {}).get("results", [])
-    return list(results or [])
+
+    # The endpoint became asynchronous: it answers with a task id and the work
+    # happens afterwards. Reading the reply as though it held the results gave
+    # an empty list and a success exit code, so a whole feature reported
+    # "no citations found" for every input.
+    task_id = payload.get("task_id")
+    if task_id:
+        payload = _await_task(str(task_id))
+        if payload is None:
+            raise LookupError(
+                "Sefaria accepted the text but the reference-finding task did "
+                "not finish in time. Try again, or with a shorter passage."
+            )
+
+    found: list[dict[str, Any]] = []
+    for section in ("body", "title"):
+        part = payload.get(section) or {}
+        if isinstance(part, dict):
+            found.extend(part.get("results") or [])
+    return found
+
+
+def _await_task(task_id: str, *, attempts: int = 15, pause: float = 1.0) -> dict[str, Any] | None:
+    """Poll an async task until it finishes, or give up and say so.
+
+    `GET /api/async/{task_id}` reports `state` and `ready`, and carries the
+    result once `state` is SUCCESS.
+    """
+    import time
+
+    for _ in range(attempts):
+        time.sleep(pause)
+        status = _get(f"/async/{task_id}", use_cache=False).payload
+        if not isinstance(status, dict):
+            continue
+        state = str(status.get("state") or "")
+        if state == "SUCCESS":
+            result = status.get("result")
+            return result if isinstance(result, dict) else {}
+        if state == "FAILURE":
+            raise LookupError(
+                f"Sefaria's reference finder failed: {status.get('error') or 'no reason given'}"
+            )
+    return None
 
 
 def search(
