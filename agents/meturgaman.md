@@ -124,8 +124,10 @@ expectations, and `yivo` for Yiddish.
 
 Output goes to stdout, uncertainties to stderr. **A flag is not noise.** It is
 the tool reporting a decision orthography alone does not settle:
-`qamats-qatan-assumed`, `sheva-undecided`, `unpointed`, `shin-undotted`,
-`script-mismatch`, `source-gap`. When one fires, put it in your answer.
+`qamats-may-be-short`, `sheva-after-qamats`, `sheva-undecided`, `unpointed`,
+`shin-undotted`, `script-mismatch`, `source-gap`,
+`distinction-not-in-scheme`, `established-form`. When one fires, put it in
+your answer.
 
 `meturgaman detect` names the standard a romanization already uses, and
 `meturgaman register` reads its community: Shabbos and mitzvos are Ashkenazi

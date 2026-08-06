@@ -112,18 +112,21 @@ The engine prints its output to stdout and its uncertainties to stderr. **A
 flag is not a warning to dismiss.** It is the tool saying it made a decision
 that orthography alone does not settle.
 
-    qamats-qatan-assumed    read short; a meteg would have made it long
+    qamats-may-be-short     read long, the commoner reading; a few words take short here
+    sheva-after-qamats      read as vocal; some words take a silent sheva here
     sheva-undecided         cannot tell whether this sheva is pronounced
     unpointed               no vowels are written and none can be recovered
     shin-undotted           shin and sin cannot be told apart here
     script-mismatch         a Yiddish scheme was used on Hebrew, or the reverse
     source-gap              the scheme's source prints no row for this
     distinction-not-in-scheme  the scheme cannot express a distinction the text makes
+    established-form        English already spells this word a settled way
 
-When a flag fires, say so in the output. "This is `ḥokhmah`, though the edition
-carries no meteg, so a reading of `ḥakhmah` is not excluded" is a useful
-sentence. Silently printing `ḥokhmah` is not. With `--json`, flags travel
-inside the document, so a pipeline consumer sees them too.
+When a flag fires, say so in the output. "The tool prints `qaneya`, but it
+flags the sheva as undecidable from the spelling, and the received Aramaic
+reading is `kanya`" is a useful sentence. Silently passing along `qaneya` is
+not. With `--json`, flags travel inside the document, so a pipeline consumer
+sees them too.
 
 ## Romanization as evidence about a text
 
