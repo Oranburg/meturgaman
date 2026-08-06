@@ -1,0 +1,305 @@
+"""The romanization engine, tested against known words.
+
+The first four tests are the four defects the previous engine shipped. They are
+named individually rather than folded into a table so that a regression says
+which one came back.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from meturgaman import hebrew
+from meturgaman.romanize import detect, register, reverse
+from meturgaman.romanize.cluster import cluster_word, segment
+from meturgaman.romanize.engine import romanize
+from meturgaman.romanize.rules import classify, qamats_qatan_words
+from meturgaman.scheme import all_schemes
+
+
+# ---------------------------------------------------------------------------
+# The four that were wrong
+# ---------------------------------------------------------------------------
+
+def test_qamats_qatan_in_kol():
+    """`כָּל` is kol, not kal.
+
+    The old engine returned `kal` and raised no flag, which is the worse half:
+    the conventions file promised a flag on exactly this case and none fired.
+    """
+    result = romanize("כָּל")
+    assert result.text == "kol"
+
+
+def test_qamats_qatan_before_a_silent_sheva():
+    """`חָכְמָה` is ḥokhmah, not ḥakhemah.
+
+    Two faults at once in the old engine: it read the qamats as long and the
+    sheva as vocal. They are linked, and getting the qamats right is what makes
+    the sheva silent.
+    """
+    result = romanize("חָכְמָה")
+    assert result.text == "ḥokhmah"
+    assert any(flag.code == "qamats-qatan-assumed" for flag in result.flags), (
+        "the reading is right but unflagged; a meteg would have made it ḥakhmah "
+        "and the reader has no way to know which the edition meant"
+    )
+
+
+def test_meteg_makes_the_qamats_long():
+    """The other side of the same rule: with a meteg, the qamats is long.
+
+    `שָֽׁמְרָה` and `חָכְמָה` are written alike apart from this mark, and they are
+    shamrah and ḥokhmah. Reading the meteg is what tells them apart, and it is
+    why the flag above matters when the meteg is absent.
+    """
+    with_meteg = "שָֽׁמְרָה"
+    result = romanize(with_meteg)
+    assert result.text.startswith("sha"), result.text
+    assert not any(flag.code == "qamats-qatan-assumed" for flag in result.flags)
+
+
+def test_maqaf_becomes_a_hyphen():
+    """SBL §5.1.1.4 note 9. The old engine emitted a space."""
+    result = romanize("כָּל־הָאָרֶץ")
+    assert "-" in result.text
+    assert result.text == "kol-ha-’arets"
+
+
+def test_yod_with_dagesh_is_a_doubled_consonant():
+    """`חִיּוּבָא` is ḥiyyuva. The old engine skipped the yod entirely."""
+    assert romanize("חִיּוּבָא").text == "ḥiyyuva"
+
+
+def test_vav_after_a_voweled_consonant_is_a_consonant():
+    """`עֲוֹן` is ʿavon, not ʿaon.
+
+    The ayin already carries a hataf patah, so the vav cannot be a vowel letter
+    for it and must be a consonant carrying the holam.
+    """
+    assert romanize("עֲוֹן", "sbl-academic").text == "ʿăwōn"
+    assert romanize("עֲוֹן").text == "‘avon"
+
+
+def test_prefix_detection_does_not_split_ordinary_words():
+    """The old engine produced `ka-ḥush` and `la-v`.
+
+    Both are ordinary words whose first letter merely looks like a prefix.
+    """
+    assert romanize("כָּחוּשׁ").text == "kaḥush"
+    assert romanize("לָאו").text == "lav"
+
+
+# ---------------------------------------------------------------------------
+# The golden corpus
+# ---------------------------------------------------------------------------
+
+GOLDEN = [
+    ("רַב", "rav"),
+    ("נֶפֶשׁ", "nefesh"),
+    ("שָׁלוֹם", "shalom"),
+    ("תּוֹרָה", "torah"),
+    ("שַׁבָּת", "shabbat"),
+    ("מִצְוָה", "mitsvah"),
+    ("צֶדֶק", "tsedeq"),
+    ("מֶלֶךְ", "melekh"),
+    ("כַּלָּה", "kallah"),
+    ("שְׁמַע", "shema‘"),
+    ("בְּרֵאשִׁית", "bereshit"),
+    ("הַמֶּלֶךְ", "ha-melekh"),
+    ("חָכְמָה", "ḥokhmah"),
+    ("כָּל", "kol"),
+]
+
+
+@pytest.mark.parametrize("source,expected", GOLDEN, ids=[word for word, _ in GOLDEN])
+def test_golden_corpus_under_the_default_scheme(source: str, expected: str):
+    assert romanize(source).text == expected
+
+
+def test_the_article_does_not_double_in_sbl_general():
+    """SBL general note 2: `ha-melekh`, not `ha-mmelekh`."""
+    assert romanize("הַמֶּלֶךְ").text == "ha-melekh"
+    # BGN does double, and joins the article rather than hyphenating it,
+    # capitalizing what follows. Whether the article's own h is capitalized
+    # depends on the word being a proper noun, which the engine has no way to
+    # know, so it leaves that to the writer.
+    assert romanize("הַמֶּלֶךְ", "bgn-pcgn").text == "haMmelekh"
+
+
+def test_final_he_keeps_its_h_in_schemes_with_no_rule_for_the_pair():
+    """`תּוֹרָה` is torah everywhere, by two different routes.
+
+    SBL states a value for qamats plus final he and uses it. ALA-LC and BGN
+    state none, so the qamats is written as a vowel and the he as a consonant.
+    Both arrive at the same place, and an earlier version arrived at `tora`.
+    """
+    for name in ("sbl-general", "ala-lc", "bgn-pcgn", "encyclopaedia-judaica-general"):
+        assert romanize("תּוֹרָה", name).text == "torah", name
+    assert romanize("תּוֹרָה", "sbl-academic").text == "tôrâ"
+
+
+# ---------------------------------------------------------------------------
+# Every scheme, on every letter
+# ---------------------------------------------------------------------------
+
+HEBREW_SCHEMES = sorted(
+    name for name, scheme in all_schemes().items() if scheme.script == "hebrew"
+)
+
+
+@pytest.mark.parametrize("name", HEBREW_SCHEMES)
+def test_no_scheme_raises_on_ordinary_text(name: str):
+    """Every Hebrew scheme handles a real verse without an exception."""
+    verse = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ"
+    result = romanize(verse, name)
+    assert result.text.strip()
+    assert not hebrew.has_hebrew(result.text)
+
+
+@pytest.mark.parametrize("name", HEBREW_SCHEMES)
+def test_each_scheme_is_recognizable_from_its_own_output(name: str):
+    """Romanize under a scheme, then work out which scheme it was.
+
+    Every signature is derived from the tables, so this also proves the
+    signatures have not drifted from what the schemes actually emit.
+    """
+    phrase = "שַׁבָּת שָׁלוֹם וְחָכְמָה תּוֹרָה צֶדֶק קֹדֶשׁ"
+    latin = romanize(phrase, name).text
+    guesses = detect.detect(latin)
+    assert guesses, f"nothing distinctive in {name}'s output: {latin!r}"
+    assert guesses[0].scheme == name, (
+        f"{name} produced {latin!r}, which was read as {guesses[0].scheme}"
+    )
+
+
+def test_no_scheme_is_undetectable():
+    assert detect.undetectable() == []
+
+
+# ---------------------------------------------------------------------------
+# Reverse
+# ---------------------------------------------------------------------------
+
+def test_reverse_recovers_the_consonantal_skeleton():
+    """Latin back to Hebrew letters, on the skeleton only."""
+    candidate = reverse.reverse("shalom", "sbl-general")[0]
+    assert candidate.letters == "שׁלמ"
+    assert candidate.is_certain
+
+
+def test_reverse_reports_ambiguity_rather_than_choosing_quietly():
+    """`t` could be tet or tav in SBL general, and the caller is told so."""
+    candidate = reverse.reverse("torah", "sbl-general")[0]
+    assert not candidate.is_certain
+    assert any("ט" in note and "ת" in note for note in candidate.ambiguities)
+
+
+def test_academic_is_more_reversible_than_general():
+    """The point of the academic style is that it can be reversed."""
+    academic = reverse.reverse("tôrâ", "sbl-academic")[0]
+    general = reverse.reverse("torah", "sbl-general")[0]
+    assert len(academic.ambiguities) <= len(general.ambiguities)
+
+
+# ---------------------------------------------------------------------------
+# Register
+# ---------------------------------------------------------------------------
+
+def test_ashkenazi_register_is_recognized():
+    found = register.detect_register("Shabbos, Sukkos, and the halachah of mitzvos")
+    assert found.register == register.ASHKENAZI
+    assert found.is_confident
+
+
+def test_sephardi_register_is_recognized():
+    found = register.detect_register("Shabbat, Sukkot, and the halakhah of mitzvot")
+    assert found.register == register.SEPHARDI
+    assert found.is_confident
+
+
+def test_the_guard_refuses_to_rewrite_ashkenazi_as_sephardi():
+    """The specific edit that damaged a real file.
+
+    A folder of notes using Shabbos nineteen times had `shaliach` rewritten as
+    `shaliaḥ` throughout. That is not a correction.
+    """
+    text = "Shabbos and halachah and Sukkos and mitzvos and shaliach"
+    with pytest.raises(register.RegisterConflict):
+        register.preserve_guard(text, "sbl-general")
+
+
+def test_the_guard_allows_a_scheme_that_stays_in_register():
+    text = "Shabbos and halachah and Sukkos and mitzvos"
+    register.preserve_guard(text, "yivo")
+    register.preserve_guard(text, "ala-lc-yiddish")
+
+
+def test_the_guard_can_be_overridden_deliberately():
+    text = "Shabbos and halachah and Sukkos and mitzvos"
+    register.preserve_guard(text, "sbl-general", force=True)
+
+
+def test_the_guard_does_not_fire_on_neutral_text():
+    register.preserve_guard("shalom", "sbl-general")
+
+
+# ---------------------------------------------------------------------------
+# Clustering and flags
+# ---------------------------------------------------------------------------
+
+def test_clustering_binds_marks_to_their_letter():
+    word = cluster_word("בָּרָא")
+    assert [c.letter for c in word] == ["ב", "ר", "א"]
+    assert word[0].dagesh
+    assert word[0].vowel == hebrew.QAMATS
+    assert not word[2].has_vowel
+
+
+def test_segmentation_leaves_non_hebrew_alone():
+    runs = segment("The word שָׁלוֹם means peace.")
+    kinds = [run.kind for run in runs]
+    assert "hebrew" in kinds and "other" in kinds
+    assert romanize("The word שָׁלוֹם means peace.").text == (
+        "The word shalom means peace."
+    )
+
+
+def test_unpointed_text_is_flagged_rather_than_guessed_at():
+    result = romanize("שלום")
+    assert any(flag.code == "unpointed" for flag in result.flags)
+
+
+def test_a_yiddish_scheme_on_pointed_hebrew_is_flagged():
+    result = romanize("חָכְמָה", "yivo")
+    assert any(flag.code == "script-mismatch" for flag in result.flags)
+
+
+def test_the_qamats_qatan_list_stays_short():
+    """A word list that grows is a glossary, and a glossary hides engine faults."""
+    words = qamats_qatan_words()
+    assert len(words) <= 12, (
+        f"the qamats-qatan list has grown to {len(words)} entries. Each addition "
+        f"should have been a rule."
+    )
+    assert hebrew.consonantal_skeleton("כָּל") in words
+
+
+# ---------------------------------------------------------------------------
+# Yiddish
+# ---------------------------------------------------------------------------
+
+def test_yivo_romanizes_yiddish():
+    assert romanize("אַ גוטן טאָג", "yivo").text == "a gutn tog"
+    assert romanize("ייִדיש", "yivo").text == "yidish"
+
+
+def test_yivo_reads_rafe_as_the_spirant():
+    """`בֿרוך` is vrukh: YIVO marks the spirant with a rafe, not by its absence."""
+    assert romanize("בֿרוך", "yivo").text == "vrukh"
+
+
+def test_a_loshn_koydesh_word_without_vowels_is_flagged():
+    """`שבת` in a Yiddish text has no vowel letters and cannot be recovered."""
+    result = romanize("שבת", "yivo")
+    assert any(flag.code == "unpointed" for flag in result.flags)

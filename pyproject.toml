@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meturgaman"
+version = "0.1.0"
+description = "Fetch Hebrew and Aramaic primary sources, compare their editions, romanize them under a named published standard, and hear them read aloud"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Seth C. Oranburg" }]
+keywords = ["hebrew", "aramaic", "yiddish", "romanization", "transliteration", "sefaria", "hebcal", "talmud", "torah"]
+
+# The core has no dependencies at all, on purpose.
+#
+# Every service this reads is keyless JSON over HTTPS, and `urllib` does that.
+# Every table it applies is a markdown file in `schemes/`, and the standard
+# library parses those. A dependency here would be one more thing to keep
+# current, for no capability gained, and it would make the tool harder to hand
+# to someone who just wants to read a page of Talmud.
+dependencies = []
+
+[project.optional-dependencies]
+# Local vocalization and morphology through Dicta's published models. These are
+# large and they run on the user's own machine, so they are opt-in. When they
+# are absent the tool says so plainly rather than quietly skipping the step.
+dicta = ["torch>=2.2", "transformers>=4.40"]
+dev = ["pytest>=8"]
+
+[project.urls]
+Homepage = "https://github.com/Oranburg/meturgaman"
+Issues = "https://github.com/Oranburg/meturgaman/issues"
+
+[project.scripts]
+meturgaman = "meturgaman.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["meturgaman*"]
+
+# The romanization tables live in `schemes/` at the repository root rather than
+# buried inside the package directory. That is deliberate. When a table
+# misbehaves, the person debugging it should find it by looking at the top of
+# the repository, not by knowing where Python keeps package data.
+#
+# The consequence is that this is a checkout-oriented tool: install it with
+# `pip install -e .` from a clone. If the loader cannot find `schemes/`, it
+# raises an error naming every path it searched instead of falling back to
+# anything.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "network: hits a live API; deselect with -m 'not network'",
+    "models: needs the optional Dicta model weights",
+]
+
+[tool.ruff]
+line-length = 100

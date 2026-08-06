@@ -1,0 +1,38 @@
+# Source PDFs are never committed.
+#
+# Two of the five published standards this project implements are copyrighted
+# commercial publications and are not ours to redistribute. Rather than commit
+# three and withhold two, none are committed and `sources/manifest.md` records
+# every URL and SHA-256 so anyone can fetch and verify them:
+#
+#     python -m tools.fetch_sources
+#
+sources/pdf/
+sources/html/
+
+# Locally downloaded model weights for the optional Dicta vocalization extra.
+# These run on the user's own machine and are large.
+models/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Response cache written by net.py
+.cache/
+
+# Audio pulled down by `meturgaman audio`
+*.mp3
+*.aiff
+*.wav
+
+# macOS
+.DS_Store
