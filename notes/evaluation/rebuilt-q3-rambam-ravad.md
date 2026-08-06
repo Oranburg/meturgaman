@@ -1,0 +1,33 @@
+<!-- voice-check: skip -->
+<!-- Verbatim transcript. The agent's prose is evidence and stays unedited. -->
+
+# Rebuilt agent, question 3
+
+Asked 2026-08-06, after the teaching rewrite of the agent. Same question,
+verbatim:
+
+> Rambam and Ravad disagree about repentance. Where, and what turns on it?
+
+The agent's answer, unedited:
+
+---
+
+Ravad (R. Abraham ben David of Posquieres) does not write one dissent on repentance but seven glosses (hassagot) printed on Mishneh Torah, Hilkhot Teshuvah — on chapters 2, 3, 4, 5, 6, 8, and 10; chapters 1, 7, and 9 carry none. All texts below are fetched from Sefaria: Hebrew from the ToratEmet edition (public domain), English from Simon Glazer's 1927 Mishnah Torah for the hassagot and Eliyahu Touger's translation (CC-BY-NC) for Rambam. The four that matter most:
+
+**1. Is a corporealist a heretic? (Teshuvah 3:7)**
+Rambam lists five who count as *minim* and forfeit the world to come, including "one who says there is one Master but that He is a body and has a form." Ravad's gloss (3:7:1): "Why does he call this one a *min*? Greater and better men than he held this thought, following what they saw in Scripture, and even more in aggadot that confuse the mind" (ולמה קרא לזה מין וכמה גדולים וטובים ממנו הלכו בזו המחשבה). What turns on it: whether heresy is defined by the proposition or by the culpability of the believer — whether an honest reader misled by anthropomorphic verses can be damned for it. Rambam makes correct metaphysics a condition of salvation; Ravad refuses to excommunicate sincere traditionalists, without himself endorsing corporealism. (Note: this gloss circulated in variant wordings; I am reporting the ToratEmet text as fetched.)
+
+**2. Foreknowledge and free will (Teshuvah 5:5)**
+Rambam raises the contradiction — if God knows I will be righteous, how can I be free? — and answers that God's knowledge is identical with His essence and therefore beyond comprehension: "we do not have the power to know how the Holy One knows all creatures and deeds," yet freedom is certain. Ravad opens with the famous rebuke: "This author did not behave like the sages — one does not begin a matter he does not know how to finish. He began with hard questions, left the matter as a difficulty, and fell back on faith. Better to have left the matter to the innocence of the innocent" (טוב היה לו להניח הדבר בתמימות התמימים). He then offers his own "partial answer": God's knowledge is not decree; it is like an astrologer's knowledge of the stars' influence, which the intellect God gave man can overcome — and he closes admitting even this analogy is inadequate (וכל זה איננו שוה). What turns on it: pedagogy as much as metaphysics — whether unresolved theological problems belong in a code read by ordinary Jews — plus whether foreknowledge is non-causal (Ravad) or simply incomprehensible (Rambam).
+
+**3. Was Egypt free to refuse? (Teshuvah 6:5)**
+Rambam explains why the Egyptians were punished though servitude was decreed at Genesis 15:13: the decree named no individual. Ravad is at his harshest: "lengthy, unseasoned words; by the life of my head, I almost say they are childish words" (כמעט אני אומר שהם דברי נערות) — on Rambam's logic, sinners could retort that the decree fell on no one and so was never fulfilled. His own answers: God punishes the wicked through those more wicked, who are then punished in turn (Isaiah 10:5); and the Egyptians exceeded the decree — "affliction" was decreed, but they enslaved with rigor and drowned infants (Zechariah 1:15). What turns on it: how a general providential decree coexists with individual accountability.
+
+**4. Is the world to come bodiless? (Teshuvah 8:2, 8:4, 8:8)**
+Rambam: "In the world to come there is no body or physical form, only the souls of the righteous, like the ministering angels"; the sages' "crowns on their heads" is metaphor for knowledge. Ravad: "This man's words are, in my eyes, close to one who says there is no resurrection for bodies but only for souls. By the life of my head, this was not the view of the sages" — citing Ketubot 111b, Shabbat 114a, Sanhedrin 91b–92a that the righteous stand in their bodies, perhaps refined like the angels or Elijah, "and the crowns are literal, not parable." At 8:4 he adds acidly that if the banquet is metaphor "there is no cup of blessing here — silence would have been better for him," and at 8:8 he accuses Rambam of denying the world's renewal after six thousand years. What turns on it: the shape of Jewish eschatology — for Rambam *olam ha-ba* is the eternal disembodied state and resurrection a separate, subordinate article; Ravad hears in that the effective denial of bodily resurrection, the same suspicion that forced Rambam to write the Treatise on Resurrection.
+
+**The smaller glosses.** 2:5 — Rambam confines public confession to interpersonal sins; Ravad adds that publicly known sins, even against God alone, demand public repentance ("as the sin was publicized, so must the repentance be"). 3:2 — "sealed immediately for death" means shortened years, not instant death (citing Yevamot 50a). 3:5 — Rambam conflated Rosh Hashanah 17a with Yoma 86b, "and I do not know where he found" the individual/community distinction. 3:9 — one who apostatizes to idolatry is a *min*, not merely a *meshummad*. 4:2 — a textual point: read *shod aniyim* (oppression of the poor), not *shor* (ox). 10 — the word *yishgeh* in the love of God means song (as in *shiggayon le-David*) or love-distraction. On that last one, flag: Glazer's English prints "we know at what he is pointing," but the Hebrew reads לא ידענו — "we do *not* know what he intended" — so the two fetched editions contradict each other; the Hebrew is right.
+
+**What turns on the whole.** Read together, the hassagot are one argument in seven installments: Rambam builds repentance into a philosophical theology — incorporeality as dogma, an intellectualist afterlife, God's knowledge beyond analogy — and polices its borders; Ravad defends the received tradition and the simple believer, insists aggadot be answered rather than allegorized away, and refuses to let metaphysical error, or metaphysical speculation, into a law code's definition of who is in and who is out. Notably, on free will itself (ch. 5–6) they do not disagree about the doctrine — both affirm it absolutely — only about whether Rambam's way of defending it helps or harms.
+
+All citations resolve as "Hasagot HaRa'avad on Mishneh Torah, Repentance" and "Mishneh Torah, Repentance" on Sefaria; each edition's license is as noted above (Glazer and ToratEmet public domain; Touger CC-BY-NC, quoted here within non-commercial scope).
