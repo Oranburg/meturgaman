@@ -71,6 +71,58 @@ def test_meteg_makes_the_qamats_long():
     assert result.text.startswith("sha"), result.text
 
 
+# ---------------------------------------------------------------------------
+# Ported from the predecessor engine's last night of fixes, found by testing
+# it against a hand-built glossary. Most were already right here by design;
+# they are pinned so a regression says which one came back.
+# ---------------------------------------------------------------------------
+
+def test_sheva_before_a_dagesh_is_silent():
+    """`מְתוּרְגְּמָן` is meturgeman, not *meturegeman*.
+
+    The sheva under the resh follows a shuruq, and the long-vowel rule read it
+    as vocal. The dagesh on the following gimel is the evidence against that:
+    a forte closes the syllable it doubles out of, and a begadkefat keeps its
+    lene only after a closed syllable, since a vocal sheva would have
+    spirantised it. Either way the syllable is the closed *tur*.
+
+    This is the class of defect the finite-domain guards cannot reach: table
+    coverage is complete and every cell is right, and the error is in how
+    context selects among them.
+    """
+    assert romanize("מְתוּרְגְּמָן").text == "meturgeman"
+    # The diphthong and suffix rules that precede the new one still hold.
+    assert romanize("וַיְדַבֵּר").text == "vaydabber"
+
+
+def test_a_root_letter_is_not_mistaken_for_a_prefixed_article():
+    """`לָאו` is lav and `כָּחוּשׁ` is kaḥush: both letters belong to the root.
+
+    The article's vowel on ב, ל, or כ marks a contraction only when the next
+    consonant carries the dagesh the contraction produces.
+    """
+    assert romanize("לָאו").text == "lav"
+    assert romanize("כָּחוּשׁ").text == "kaḥush"
+    assert romanize("הַמֶּלֶךְ").text == "ha-melekh"
+
+
+def test_a_vav_is_a_mater_only_when_the_previous_consonant_needs_a_vowel():
+    """`שָׁלוֹם` is shalom but `עֲוֹן` is ‘avon.
+
+    Both are vav-plus-holam. In the first the lamed carries no vowel, so the
+    vav supplies one. In the second the ayin already has its hataf-patach, so
+    the vav is consonantal and the holam is its own vowel.
+    """
+    assert romanize("שָׁלוֹם").text == "shalom"
+    assert romanize("עֲוֹן").text == "‘avon"
+
+
+def test_a_yod_with_a_dagesh_is_consonantal_and_doubles():
+    """`חִיּוּבָא` is ḥiyyuva, not *ḥiuva*: the dagesh says the yod is a consonant."""
+    assert romanize("חִיּוּבָא").text == "ḥiyyuva"
+    assert romanize("בַּיִת").text == "bayit"
+
+
 def test_maqaf_becomes_a_hyphen():
     """SBL §5.1.1.4 note 9. The old engine emitted a space."""
     result = romanize("כָּל־הָאָרֶץ")

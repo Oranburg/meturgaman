@@ -574,6 +574,17 @@ def _classify_sheva(word: Word, analyses: list[Analysis]) -> None:
             analysis.sheva_kind = SHEVA_NACH
             continue
 
+        # A sheva immediately before a letter carrying a dagesh is silent,
+        # whatever the vowel before it. The dagesh is itself the evidence: a
+        # forte closes the syllable it doubles out of, and a begadkefat letter
+        # keeps its lene only after a closed syllable, since a vocal sheva
+        # would have spirantised it. Without this the long-vowel test below
+        # fired on the shuruq in `מְתוּרְגְּמָן` and produced *meturegeman* for
+        # a word whose second syllable is the closed *tur*.
+        if following.dagesh_kind in (DAGESH_FORTE, DAGESH_LENE):
+            analysis.sheva_kind = SHEVA_NACH
+            continue
+
         if previous.role == ROLE_MATER or previous.carries_full_vowel:
             analysis.sheva_kind = SHEVA_NA
             continue
