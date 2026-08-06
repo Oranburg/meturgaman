@@ -96,10 +96,11 @@ def teaching(
         raise ValueError(f"no Hebrew found for {reading.ref.normalized}")
 
     romanized = romanize(text, scheme)
-    lines = [
-        text,
-        f"*{romanized.text}*",
-    ]
+    lines = [text]
+    # An empty romanization would render as a bare `**`, which markdown shows
+    # as nothing and a reader cannot question. Leave the line out instead.
+    if romanized.text.strip():
+        lines.append(f"*{romanized.text}*")
     if english:
         lines.append(english)
     lines.append("")
@@ -133,7 +134,10 @@ def interlinear(
     for word in text.split():
         romanized = romanize(word, scheme)
         flags.extend(str(flag) for flag in romanized.flags)
-        lines.append(f"> {word} — *{romanized.text}*")
+        if romanized.text.strip():
+            lines.append(f"> {word} — *{romanized.text}*")
+        else:
+            lines.append(f"> {word}")
 
     lines.append("")
     footer = reading.ref.normalized
@@ -147,10 +151,18 @@ def inline(
     text: str, translation: str = "", *, scheme: Scheme | str | None = None
 ) -> Rendered:
     """Tier 3: a phrase for the middle of a sentence."""
+    if not text.strip():
+        # Without this, an empty phrase came back as ` (**)`, which pasted
+        # invisible garbage into the middle of someone's sentence.
+        raise ValueError("no text to gloss")
     romanized = romanize(text, scheme)
-    gloss = f"{text} (*{romanized.text}*"
-    if translation:
-        gloss += f", {translation}"
+    gloss = f"{text} ("
+    if romanized.text.strip():
+        gloss += f"*{romanized.text}*"
+        if translation:
+            gloss += f", {translation}"
+    else:
+        gloss += translation
     gloss += ")"
     return Rendered(text=gloss, flags=[str(flag) for flag in romanized.flags])
 
@@ -239,8 +251,9 @@ def study_file(
         lines.append(f"**{segment.anchor}**")
         lines.append("")
         lines.append(segment.text)
-        lines.append("")
-        lines.append(f"*{romanized.text}*")
+        if romanized.text.strip():
+            lines.append("")
+            lines.append(f"*{romanized.text}*")
         rendered_english = english_by_anchor.get(segment.anchor)
         if rendered_english:
             lines.append("")

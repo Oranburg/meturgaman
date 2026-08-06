@@ -173,11 +173,17 @@ def _classify(left: str, right: str) -> str:
     return SUBSTANTIVE
 
 
-def _words(observation: Observation) -> list[str]:
-    """The words of an edition, reduced to their consonantal skeletons."""
+def _words(observation: Observation) -> list[tuple[str, str]]:
+    """Each word of an edition, as printed and as consonantal skeleton.
+
+    Both forms are needed: the diff runs on skeletons so vocalization is not
+    reported as disagreement, but classification needs the printed form. A
+    geresh is not a letter, so skeletonizing first erased every abbreviation
+    mark and the ABBREVIATION category could never fire.
+    """
     text = observation.joined
     return [
-        hebrew.consonantal_skeleton(word)
+        (word, hebrew.consonantal_skeleton(word))
         for word in text.split()
         if hebrew.has_hebrew(word)
     ]
@@ -222,15 +228,19 @@ def compare(reading: Reading, *, language: str = "he") -> Comparison:
     # same findings several times over and reads as noise.
     base = observations[0]
     base_words = _words(base)
+    base_skeletons = [skeleton for _, skeleton in base_words]
 
     for other in observations[1:]:
         other_words = _words(other)
-        matcher = difflib.SequenceMatcher(None, base_words, other_words)
+        other_skeletons = [skeleton for _, skeleton in other_words]
+        matcher = difflib.SequenceMatcher(None, base_skeletons, other_skeletons)
         for tag, i1, i2, j1, j2 in matcher.get_opcodes():
             if tag == "equal":
                 continue
-            left = " ".join(base_words[i1:i2])
-            right = " ".join(other_words[j1:j2])
+            # Report the words as the editions print them. The skeleton found
+            # the disagreement; the printed forms are what a reader checks.
+            left = " ".join(word for word, _ in base_words[i1:i2])
+            right = " ".join(word for word, _ in other_words[j1:j2])
             comparison.differences.append(
                 Difference(
                     kind=_classify(left, right),
