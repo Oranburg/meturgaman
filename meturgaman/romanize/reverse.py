@@ -144,7 +144,7 @@ def reverse(text: str, scheme: str | Scheme | None = None) -> list[Candidate]:
     little had to be guessed.
 
     >>> reverse("shalom", "sbl-general")[0].letters
-    'שלמ'
+    'שׁלם'
     """
     text = unicodedata.normalize("NFC", text)
 

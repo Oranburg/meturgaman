@@ -128,10 +128,24 @@ def test_every_scheme_cites_a_source(name: str, scheme: Scheme):
 
 @pytest.mark.parametrize("name,scheme", SCHEMES, ids=[n for n, _ in SCHEMES])
 def test_every_scheme_records_how_it_was_built(name: str, scheme: Scheme):
-    """The provenance header is what says the table was read rather than recalled."""
-    head = scheme.text[:400]
-    assert "two-channel" in head, (
-        f"{name} has no provenance header saying how its table was extracted"
+    """The provenance section is what says the table was read rather than recalled.
+
+    The old assertion looked for the literal string "two-channel" in the first
+     400 characters, which tested a phrasing convention rather than substance.
+    What actually matters: the file names its source document, and it carries
+    a section recording how the values were extracted and checked.
+    """
+    assert scheme.citation.strip(), f"{name} carries no citation"
+    assert scheme.source.strip(), f"{name} names no source file"
+    # The provenance record is the comment the generator leaves at the top:
+    # it must say the table came from reading the document, and it must point
+    # at the manifest where the document's URL and hash live.
+    head = scheme.text[:600]
+    assert head.lstrip().startswith("<!--"), (
+        f"{name} has no provenance comment saying how its table was extracted"
+    )
+    assert "sources/manifest.md" in head, (
+        f"{name}'s provenance comment does not point at the manifest"
     )
 
 

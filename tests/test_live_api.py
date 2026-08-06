@@ -23,6 +23,8 @@ written down, each of which cost time to find and none of which is documented:
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 pytestmark = pytest.mark.network
@@ -139,14 +141,26 @@ def test_version_all_needs_the_two_step_and_gets_several_editions():
 
 
 def test_independent_witnesses_deduplicates_by_provider():
-    """Three editions from tanach.us are one witness, not three."""
+    """Editions that share a digitization source are one witness, not several.
+
+    The old assertion (`witnesses <= editions`) was true by construction and
+    tested nothing. This one requires an actual collapse: among the first
+    eight editions of Genesis 1:1 at least two share a provider, so the
+    witness count must come out strictly below the edition count, and it must
+    equal the number of distinct providers.
+    """
     from meturgaman.sources import sefaria
 
     try:
         reading = sefaria.read("Genesis 1:1", version="all", max_editions=8)
     except Exception as error:
         _skip_on_network_trouble(error)
-    assert reading.independent_witnesses <= len(reading.observations)
+    providers = [observation.edition.provider for observation in reading.observations]
+    assert reading.independent_witnesses == len(set(providers))
+    assert len(set(providers)) < len(providers), (
+        "expected at least two Genesis 1:1 editions from one provider; "
+        f"got {providers}"
+    )
 
 
 def test_text_only_leaves_no_markup_behind():
@@ -158,7 +172,9 @@ def test_text_only_leaves_no_markup_behind():
         _skip_on_network_trouble(error)
     for observation in reading.observations:
         assert "<" not in observation.joined
-        assert "&" not in observation.joined, (
+        # A bare ampersand is legitimate text ("Rav & Shmuel" in some
+        # translation is fine); an ampersand that opens an entity is markup.
+        assert not re.search(r"&#?\w+;", observation.joined), (
             "an HTML entity survived; `&thinsp;` used to reach the output"
         )
 
@@ -199,13 +215,22 @@ def test_the_lexicon_takes_hebrew_in_the_url():
 
 
 def test_a_talmud_reference_maps_to_its_sugya():
+    """The boundary has to be a real passage, not an echo of the input.
+
+    `assert found` passed for any truthy string, including the input itself.
+    A mapped sugya is a range in the same tractate that differs from what was
+    asked, and for a mid-page reference it spans more than one segment.
+    """
     from meturgaman.sources import sefaria
 
     try:
-        found = sefaria.passage_boundary("Berakhot 5a")
+        found = sefaria.passage_boundary("Bava Metzia 75b:2")
     except Exception as error:
         _skip_on_network_trouble(error)
-    assert found
+    assert found is not None
+    assert found != "Bava Metzia 75b:2"
+    assert found.startswith("Bava Metzia")
+    assert "-" in found, f"expected a range, got {found!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -213,12 +238,32 @@ def test_a_talmud_reference_maps_to_its_sugya():
 # ---------------------------------------------------------------------------
 
 def test_the_committed_spec_still_matches_the_service():
-    """The locale enum is read from the committed spec, so it has to be there."""
+    """A locale from the committed enum is still one the live service accepts.
+
+    The old version of this test was marked network and made no network call,
+    so it could never notice Hebcal dropping a locale. Now it asks the live
+    service for a date in the rarest Ashkenazi locale the spec lists and
+    requires an answer, which fails if the enum has drifted.
+    """
     from meturgaman.sources import hebcal
 
     assert "s" in hebcal.LOCALES
     assert "a" in hebcal.LOCALES
-    assert len(hebcal.ASHKENAZI_LOCALES) >= 4
+    assert "ashkenazi_litvish" in hebcal.ASHKENAZI_LOCALES
+    assert "sh" not in hebcal.ASHKENAZI_LOCALES, (
+        "the spec's own table says sh is Sephardic transliteration with Hebrew"
+    )
+    try:
+        day = hebcal.read_day("2026-09-12", locale="ashkenazi_litvish")
+    except Exception as error:
+        _skip_on_network_trouble(error)
+    assert day.locale == "ashkenazi_litvish"
+    assert day.hebrew_date.year == 5787
+    # The proof the locale reached the service: Rosh Hashanah comes back in
+    # Litvish dress.
+    assert any("Reish Hashono" in event.title for event in day.events), (
+        [event.title for event in day.events]
+    )
 
 
 def test_a_date_converts_and_carries_its_hebrew():
