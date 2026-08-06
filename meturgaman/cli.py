@@ -554,15 +554,31 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    from meturgaman.net import NetworkError
+    from meturgaman.scheme import SchemeError
+
     parser = build_parser()
     arguments = parser.parse_args(argv)
     try:
         return arguments.handler(arguments)
-    except (LookupError, ValueError, RuntimeError) as error:
-        print(f"refused: {error}", file=sys.stderr)
-        return 1
     except KeyboardInterrupt:  # pragma: no cover
         return 130
+    except (SchemeError, NetworkError) as error:
+        # Both subclass Exception directly, so neither was caught before and a
+        # mistyped scheme name or an unreachable service produced a traceback.
+        print(f"refused: {error}", file=sys.stderr)
+        return 1
+    except (ValueError, RuntimeError, OSError, OverflowError) as error:
+        print(f"refused: {error}", file=sys.stderr)
+        return 1
+    except LookupError as error:
+        # LookupError is the base of KeyError and IndexError, so an internal
+        # fault would otherwise print as `refused: 'somekey'` and read like the
+        # user's mistake.
+        if type(error) in (KeyError, IndexError):
+            raise
+        print(f"refused: {error}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

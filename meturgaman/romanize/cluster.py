@@ -126,7 +126,14 @@ class Word:
         Unpointed text cannot be romanized by rule, only guessed at, so the
         engine refuses it rather than inventing vowels.
         """
-        return any(cluster.has_vowel for cluster in self.clusters)
+        return any(
+            # A shuruq is a vav carrying a dagesh and no vowel point, so a word
+            # whose only vowel is one was being told its vowels could not be
+            # recovered when they had been.
+            cluster.has_vowel
+            or (cluster.base == hebrew.VAV and cluster.dagesh and not cluster.has_vowel)
+            for cluster in self.clusters
+        )
 
     @property
     def has_meteg(self) -> bool:

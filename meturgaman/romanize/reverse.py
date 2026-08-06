@@ -124,6 +124,14 @@ def _reverse_one(text: str, scheme: Scheme) -> Candidate:
                 ambiguities.append(f"{character!r} matches nothing in {scheme.name}")
             position += 1
 
+    # Hebrew writes five letters differently at the end of a word, and a
+    # reconstruction that ignores that produces a spelling no reader recognizes:
+    # `שׁלמ` rather than `שׁלום`.
+    if letters:
+        tail = letters[-1]
+        if len(tail) == 1 and tail in hebrew.BASE_TO_FINAL:
+            letters[-1] = hebrew.BASE_TO_FINAL[tail]
+
     return Candidate(
         letters="".join(letters), scheme=scheme.name, ambiguities=ambiguities
     )

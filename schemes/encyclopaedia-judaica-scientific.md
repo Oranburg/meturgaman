@@ -11,7 +11,7 @@ never_double: [sh]
 hyphenate_prefixes: false
 always_mark_alef: true
 shva_na: "ə"
-tsere_male: "ē"
+tsere_male: "e"
 hireq_male: "i"
 holam_male: "o"
 shuruq: "û"
@@ -62,7 +62,7 @@ of each and says so.
 | שׂ | sin | ś |
 | תּ | tav | t |
 | ת | tav spirant | ṯ |
-| ג׳ | gimel geresh | ǧ |
+| ג׳ | gimel geresh | ğ |
 | ז׳ | zayin geresh | ž |
 | צ׳ | tsadi geresh | č |
 
@@ -140,6 +140,21 @@ is a choice rather than a reading, so each is listed.
 | ◌ְ | `ə, ě, e` | `ə` | First listed. Only sheva na is transliterated. |
 | ◌ֻ | `u, ŭ` | `u` | First listed. |
 | shuruq | `û, ū` | `û` | First listed. |
+| ◌ֲ | `a, ᵃ` | `a` | First listed; the second is a raised a. |
+| ◌ֹ | `o, o, o` | `o` | Three o-forms whose diacritics the extraction cannot separate; the first is bare. |
+
+## Two values this file states that the column does not print
+
+`tsere_male` is `e`. The Scientific column's tsere-yod row is **blank**; only the
+General column fills it, with "ei; biblical e". The value here is therefore the
+plain tsere value carried through to the sequence rather than a reading of the
+row, which is the honest description of it.
+
+`ə` is U+0259 LATIN SMALL LETTER SCHWA. The document's text stream holds U+04D9
+CYRILLIC SMALL LETTER SCHWA, which is the same glyph and is almost certainly a
+font substitution rather than a claim about Cyrillic. The Latin codepoint is what
+this file uses, and the difference is recorded here rather than left to be
+discovered.
 
 ## A caveat about using this on running text
 

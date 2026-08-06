@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -38,6 +38,17 @@ meturgaman = "meturgaman.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["meturgaman*"]
+
+# The tables, the rule files and the API contracts ship with the package. They
+# are data the code reads at runtime, so an install without them is an install
+# that cannot romanize anything, and the failure used to be a traceback from
+# deep inside the loader.
+[tool.setuptools.package-data]
+meturgaman = [
+    "data/schemes/*.md",
+    "data/rules/*.md",
+    "data/api/*",
+]
 
 # The romanization tables live in `schemes/` at the repository root rather than
 # buried inside the package directory. That is deliberate. When a table

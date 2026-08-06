@@ -81,15 +81,31 @@ class Comparison:
     def substantive(self) -> list[Difference]:
         return [item for item in self.differences if item.kind == SUBSTANTIVE]
 
+    #: True when fewer than two editions were available, so nothing was compared.
+    nothing_compared: bool = False
+
     @property
     def agrees(self) -> bool:
-        return not self.substantive
+        """True only when a comparison happened and found no difference.
+
+        With fewer than two editions there is no agreement to report, and
+        saying "the consonantal text agrees everywhere" about a single witness
+        is the system agreeing with itself.
+        """
+        return not self.nothing_compared and not self.differences
 
     def report(self) -> str:
         lines = [
             f"{self.ref}: {len(self.editions)} editions, "
             f"{self.independent_witnesses} independent witnesses"
         ]
+        if self.nothing_compared:
+            lines.append(
+                "  Fewer than two editions in this language, so nothing was "
+                "compared. This is not agreement."
+            )
+            return "\n".join(lines)
+
         if self.agrees:
             lines.append(
                 "  The consonantal text agrees everywhere. Differences in "
@@ -103,7 +119,8 @@ class Comparison:
         summary = ", ".join(f"{count} {kind}" for kind, count in sorted(counts.items()))
         lines.append(f"  {summary}")
         lines.append("")
-        for item in self.substantive:
+        for item in self.differences:
+            lines.append(f"  [{item.kind}]")
             lines.append(f"  {item.left_edition}  {item.left!r}")
             lines.append(f"  {item.right_edition}  {item.right!r}")
             lines.append("")
@@ -119,10 +136,10 @@ def _looks_like_abbreviation(left: str, right: str) -> bool:
             head = hebrew.consonantal_skeleton(short)[:1]
             if head and hebrew.consonantal_skeleton(long).startswith(head):
                 return True
-        if 0 < len(short) < len(long) / 2:
-            skeleton = hebrew.consonantal_skeleton(short)
-            if skeleton and hebrew.consonantal_skeleton(long).startswith(skeleton[:1]):
-                return True
+        # A shared first letter and a length ratio is not evidence of an
+        # abbreviation. It classified `בן` against `בראשית ברא אלהים` as one,
+        # which removed a three-word difference from the report entirely. An
+        # abbreviation is marked, and it is one word.
     return False
 
 
@@ -154,8 +171,8 @@ def compare(reading: Reading, *, language: str = "he") -> Comparison:
     observations = [
         observation
         for observation in reading.observations
-        if language.lower() in (observation.edition.language or "").lower()
-        or language.lower() in (observation.edition.actual_language or "").lower()
+        if (observation.edition.language or "").lower().startswith(language.lower())
+        or (observation.edition.actual_language or "").lower().startswith(language.lower())
     ]
 
     comparison = Comparison(
@@ -167,6 +184,7 @@ def compare(reading: Reading, *, language: str = "he") -> Comparison:
     )
 
     if len(observations) < 2:
+        comparison.nothing_compared = True
         return comparison
 
     # Compare each edition against the first. Comparing every pair produces the

@@ -236,7 +236,11 @@ def _get(path: str, params: dict[str, Any] | None = None, **kwargs: Any) -> Fetc
     # Percent-encode the path. Several endpoints take Hebrew in the URL, such as
     # `/api/words/צדקה`, and an unencoded one raises inside http.client rather
     # than reaching the network at all.
-    path = urllib.parse.quote(path, safe="/:,._-'\"()[]|+ ")
+    # A space in `safe` leaves spaces in the URL and http.client refuses the
+    # request before it leaves the machine; a slash lets user input climb out of
+    # its path segment. Neither belongs here.
+    head, _, tail = path.partition("?")
+    path = urllib.parse.quote(head, safe="/:,._-'()[]") + (f"?{tail}" if tail else "")
     return get_json(
         f"{BASE}{path}",
         params,
@@ -250,6 +254,36 @@ def _get(path: str, params: dict[str, Any] | None = None, **kwargs: Any) -> Fetc
 # ---------------------------------------------------------------------------
 # References
 # ---------------------------------------------------------------------------
+
+def _suggestions_for(citation: str) -> list[str]:
+    """Spellings Sefaria recognizes that resemble this one.
+
+    Used to make a refusal useful. It does **not** pick one: `Hilchot Deot`
+    brings back `Mishneh Torah, Repentance` as its top-ranked reference, which
+    is a different book by a different name, and an earlier version of this
+    function returned it. Substituting a text the reader did not ask for is
+    worse than refusing, because the reader has no way to notice.
+    """
+    text = " ".join(citation.strip().split())
+    match = re.match(r"^(?P<book>.+?)[\s,]+(?P<locator>[\d]+[ab]?([:.]\d+)*)$", text)
+    book = match["book"] if match else text
+    try:
+        payload = _get(f"/name/{book}", {"limit": 8}).payload
+    except (NetworkError, LookupError, ValueError):
+        return []
+    if not isinstance(payload, dict):
+        return []
+    found: list[str] = []
+    for entry in payload.get("completion_objects") or []:
+        if (entry.get("type") or "").lower() == "ref":
+            title = entry.get("key") or entry.get("title")
+            if title and str(title) not in found:
+                found.append(str(title))
+    for item in payload.get("completions") or []:
+        if str(item) not in found:
+            found.append(str(item))
+    return found[:6]
+
 
 def resolve(citation: str) -> Ref:
     """Validate a citation and return its canonical form.
@@ -273,6 +307,25 @@ def resolve(citation: str) -> Ref:
 
     if not isinstance(found, dict) or found.get("error"):
         raise LookupError(f"{citation!r} did not resolve: {found}")
+
+    # The endpoint answers HTTP 200 with `is_ref: false` for a string that is
+    # not a reference, and sets no error key. Without this check every
+    # fabricated citation validated, which is the exact failure this whole
+    # project is built against.
+    if found.get("is_ref") is False:
+        # Refuse, and make the refusal useful by naming what Sefaria thinks it
+        # might be. Deliberately without choosing: `Hilchot Deot` ranks
+        # `Mishneh Torah, Repentance` first, which is a different book, and a
+        # fabricated title brings back a real one. Picking the top suggestion
+        # would answer a question nobody asked, and the reader would have no
+        # way to see that it had happened.
+        suggestions = _suggestions_for(citation)
+        detail = ""
+        if suggestions:
+            detail = "\n  Did you mean:\n    " + "\n    ".join(suggestions)
+        raise LookupError(
+            f"{citation!r} is not a reference Sefaria recognizes.{detail}"
+        )
 
     navigation = found.get("navigation_refs") or {}
     path = navigation.get("shortest_path_to_root") or []
@@ -330,6 +383,20 @@ def read(
     its `language|versionTitle` name.
     """
     ref = citation if isinstance(citation, Ref) else resolve(str(citation))
+
+    for wanted in ([version] if isinstance(version, str) else list(version)):
+        text = str(wanted)
+        if text in VERSION_KEYWORDS:
+            continue
+        if "|" in text and text.split("|", 1)[0].strip():
+            continue
+        if text.isalpha():
+            continue  # a bare language name such as `hebrew`
+        raise ValueError(
+            f"version={text!r} is not valid. Use one of "
+            f"{', '.join(VERSION_KEYWORDS)}, a language name such as 'hebrew', "
+            f"or 'language|Version Title'."
+        )
 
     if return_format not in RETURN_FORMATS:
         raise ValueError(
@@ -498,6 +565,30 @@ def media(citation: str | Ref) -> list[dict[str, Any]]:
     return list(found or [])
 
 
+def links(
+    citation: str | Ref,
+    *,
+    categories: Iterable[str] | None = None,
+    with_text: bool = False,
+) -> list[dict[str, Any]]:
+    """Texts connected to a reference: commentary, targum, midrash, parallels.
+
+    This is how a cross-text pairing gets evidenced from Sefaria's own link graph
+    rather than from a memory of what commentaries exist. `categories` filters
+    server-side and takes Sefaria's own category names, such as `Commentary`,
+    `Targum`, `Midrash`, `Halakhah`.
+
+    `related()` returns this and much else in one call; this is the narrow
+    version for when the link graph is what you want.
+    """
+    ref = citation if isinstance(citation, Ref) else resolve(str(citation))
+    params: dict[str, Any] = {"with_text": 1 if with_text else 0}
+    if categories:
+        params["categories"] = ",".join(categories)
+    payload = _get(f"/links/{ref.url_ref}", params).payload
+    return list(payload or [])
+
+
 def passage_boundary(citation: str | Ref) -> str | None:
     """The sugya containing a Talmud reference, when one is mapped.
 
@@ -511,9 +602,8 @@ def passage_boundary(citation: str | Ref) -> str | None:
         found = payload.get(ref.normalized) or payload.get(ref.url_ref)
         if found:
             return str(found)
-        for value in payload.values():
-            if isinstance(value, str):
-                return value
+        # No fallback to "whatever string is in there": a mapping for a
+        # different ref is not an answer to this one.
     return None
 
 
@@ -528,7 +618,7 @@ def name_candidates(text: str, *, limit: int = 10) -> list[dict[str, Any]]:
     good but not authoritative: `Hilchot Deot` comes back with
     `Mishneh Torah, Repentance` first.
     """
-    payload = _get(f"/name/{text.replace(' ', '_')}", {"limit": limit}).payload
+    payload = _get(f"/name/{text}", {"limit": limit}).payload
     if not isinstance(payload, dict):
         return []
     return list(payload.get("completion_objects") or [])
@@ -592,7 +682,7 @@ def search(
     ).payload
 
     hits: list[SearchHit] = []
-    rows = (payload or {}).get("hits", {}).get("hits", [])
+    rows = ((payload or {}).get("hits") or {}).get("hits") or []
     for row in rows:
         source = row.get("_source", {}) or {}
         highlight = row.get("highlight", {}) or {}
@@ -643,7 +733,10 @@ def topics(*, limit: int = 0) -> list[Topic]:
 def topic(slug: str) -> Topic:
     """One topic's metadata."""
     payload = _get(f"/v2/topics/{slug}").payload
-    if not isinstance(payload, dict) or payload.get("error"):
+    if not isinstance(payload, dict) or payload.get("error") or not payload:
+        # An unknown slug comes back as `{}`, which is a dict and carries no
+        # error, so without the emptiness check this returned a Topic named
+        # after whatever was asked for.
         raise LookupError(f"no topic {slug!r}")
     primary = payload.get("primaryTitle") or {}
     return Topic(
@@ -669,7 +762,7 @@ def topic_sources(slug: str, *, limit: int = 20) -> list[str]:
     if not isinstance(payload, dict):
         return []
     refs: list[str] = []
-    for entry in payload.get("refs", {}).get("about", {}).get("refs", []) or []:
+    for entry in ((payload.get("refs") or {}).get("about") or {}).get("refs") or []:
         ref = entry.get("ref") if isinstance(entry, dict) else entry
         if ref and ref not in refs:
             refs.append(str(ref))

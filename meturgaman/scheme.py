@@ -126,6 +126,9 @@ _RULE_KEYS: dict[str, tuple[type, Any]] = {
     "shuruq": (str, "u"),
     # Patah followed by yod. Only ALA-LC prints a distinct value, `ai`.
     "patah_male": (str, ""),
+    # Segol followed by yod. Distinct from tsere plus yod, because SBL general
+    # deviates on the tsere sequence only.
+    "segol_male": (str, "e"),
     # Word-final qamats followed by he: `ah` in SBL general, `â` in academic.
     "qamats_he": (str, ""),
     # Word-final qamats, yod, vav: the third masculine singular suffix, which
@@ -663,11 +666,24 @@ def schemes_directory() -> Path:
         tried.append(candidate)
 
     here = Path(__file__).resolve()
+
+    # Installed: the tables ship as package data under `meturgaman/data/`.
+    packaged = here.parent / "data" / "schemes"
+    tried.append(packaged)
+    if packaged.is_dir() and any(packaged.glob("*.md")):
+        return packaged
+
+    # From a checkout: `schemes/` at the top of the repository, which is where
+    # anyone debugging a table will look for it. The walk stops at the first
+    # directory holding a `.git`, so it cannot wander into a world-writable
+    # parent and load a table planted there.
     for parent in here.parents:
         candidate = parent / "schemes"
         tried.append(candidate)
         if candidate.is_dir() and any(candidate.glob("*.md")):
             return candidate
+        if (parent / ".git").exists():
+            break
 
     listing = "\n  ".join(str(path) for path in tried)
     raise SchemeError(

@@ -51,15 +51,14 @@ def test_a_reference_resolves():
     assert ref.url_ref == "Genesis_1:1"
 
 
-def test_the_hard_reference_forms_still_resolve():
-    """`Hilchot X` used to fail. It should not now."""
+def test_the_canonical_reference_forms_resolve():
     from meturgaman.sources import sefaria
 
     for citation in (
         "Berakhot 2a",
         "Mishneh Torah, Repentance 1:1",
-        "Hilchot Teshuvah 1:1",
         "Guide for the Perplexed, Part 1 1",
+        "Shulchan Arukh, Orach Chayim 1:1",
     ):
         try:
             assert sefaria.resolve(citation).normalized
@@ -67,6 +66,46 @@ def test_the_hard_reference_forms_still_resolve():
             pytest.fail(f"{citation!r} no longer resolves")
         except Exception as error:
             _skip_on_network_trouble(error)
+
+
+def test_a_fabricated_citation_is_refused():
+    """The endpoint answers 200 with `is_ref: false` and no error key.
+
+    Without checking that field, every invented citation validated and was
+    printed as though it were a passage. This is the single most important
+    refusal in the package.
+    """
+    from meturgaman.sources import sefaria
+
+    for citation in ("Fabricated Book 9:9", "Nonsense 5:5", "Not A Real Work 1:1"):
+        try:
+            found = sefaria.resolve(citation)
+        except LookupError:
+            continue
+        except Exception as error:
+            _skip_on_network_trouble(error)
+        pytest.fail(f"{citation!r} validated as {found.normalized!r}")
+
+
+def test_a_refusal_offers_candidates_without_choosing_one():
+    """A shorthand a reader writes is refused, with what it might be.
+
+    `Hilchot Teshuvah` is not a title Sefaria indexes. Naming the candidates
+    makes the refusal useful; picking one would be worse than refusing, because
+    Sefaria ranks `Mishneh Torah, Repentance` first for `Hilchot Deot` too, and
+    that is a different book.
+    """
+    from meturgaman.sources import sefaria
+
+    try:
+        sefaria.resolve("Hilchot Teshuvah 1:1")
+    except LookupError as error:
+        assert "Did you mean" in str(error)
+        assert "Mishneh Torah" in str(error)
+        return
+    except Exception as error:
+        _skip_on_network_trouble(error)
+    pytest.fail("a shorthand title resolved when it should have been refused")
 
 
 def test_a_passage_comes_back_with_its_edition_and_licence():

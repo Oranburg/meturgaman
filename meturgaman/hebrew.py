@@ -39,14 +39,17 @@ __all__ = [
     "YIDDISH_LIGATURES", "LIGATURE_EXPANSIONS",
     "BEGADKEFAT", "GUTTURALS", "MATRES",
     "DAGESH", "RAFE", "SHIN_DOT", "SIN_DOT", "METEG", "MAQAF",
-    "GERESH", "GERSHAYIM",
+    "GERESH", "GERSHAYIM", "GRAPHEME_JOINER",
     "SHEVA", "HATAF_SEGOL", "HATAF_PATAH", "HATAF_QAMATS", "HIREQ", "TSERE",
     "SEGOL", "PATAH", "QAMATS", "HOLAM", "HOLAM_HASER_FOR_VAV", "QUBUTS",
     "QAMATS_QATAN",
     "VOWEL_POINTS", "HATAF_VOWELS", "SHORT_VOWELS", "LONG_VOWELS",
     "VOWEL_NAMES", "LETTER_NAMES",
     "CANTILLATION", "DOTTED_CIRCLE",
+    "PUNCTUATION",
     "normalize", "strip_points", "strip_cantillation", "strip_vowels",
+    "strip_punctuation", "for_speech",
+    "has_nikud", "has_cantillation", "describe_vocalization",
     "is_letter", "is_final", "is_point", "is_vowel", "is_cantillation",
     "base_letter", "consonantal_skeleton", "has_hebrew", "is_hebrew_word",
 ]
@@ -214,7 +217,23 @@ VOWEL_NAMES = {
     QAMATS_QATAN: "qamats qatan",
 }
 
-_POINTS = frozenset(VOWEL_POINTS) | {DAGESH, RAFE, SHIN_DOT, SIN_DOT, METEG} | CANTILLATION
+#: U+034F COMBINING GRAPHEME JOINER. Sefaria's Masoretic editions use it to hold
+#: two accents apart on one letter. It is invisible and carries no meaning for
+#: romanization, but it is not in the Hebrew block, so anything that decides
+#: "Hebrew or not" character by character will cut a word in half at it and pass
+#: every mark after the cut through untouched. That is how a meteg and a
+#: cantillation accent ended up inside Latin output.
+GRAPHEME_JOINER = "͏"
+
+_POINTS = (
+    frozenset(VOWEL_POINTS)
+    | {DAGESH, RAFE, SHIN_DOT, SIN_DOT, METEG, GRAPHEME_JOINER}
+    # Geresh and gershayim mark borrowed sounds and acronyms. They belong to
+    # the letter before them, so they have to cluster with it rather than break
+    # the run.
+    | {GERESH, GERSHAYIM}
+    | CANTILLATION
+)
 _LETTERS = frozenset(LETTERS) | frozenset(FINAL_FORMS) | frozenset(YIDDISH_LIGATURES)
 _VOWELS = frozenset(VOWEL_POINTS)
 
@@ -300,6 +319,60 @@ def strip_vowels(text: str) -> str:
 def strip_points(text: str) -> str:
     """Remove every combining mark, leaving letters alone."""
     return "".join(character for character in text if not is_point(character))
+
+
+#: Punctuation that is neither a letter nor a vowel: paseq, sof pasuq, nun
+#: hafukha, geresh, gershayim. Stripped for display and for speech, and kept
+#: everywhere else, because a sof pasuq is a full stop and losing it silently
+#: runs two verses together.
+PUNCTUATION = frozenset({"׀", "׃", "׆", GERESH, GERSHAYIM})
+
+
+def has_nikud(text: str) -> bool:
+    """Whether a string carries vowel points anywhere."""
+    return any(is_vowel(character) for character in normalize(text))
+
+
+def has_cantillation(text: str) -> bool:
+    """Whether a string carries te'amim anywhere."""
+    return any(is_cantillation(character) for character in normalize(text))
+
+
+def describe_vocalization(text: str) -> str:
+    """`accented`, `pointed`, or `bare`.
+
+    Used to choose between editions. Asking Sefaria for a passage returns
+    several, and which one to romanize depends on this: an unpointed edition
+    cannot be romanized by rule, and an accented one carries the meteg that
+    settles a qamats.
+    """
+    if has_cantillation(text):
+        return "accented"
+    if has_nikud(text):
+        return "pointed"
+    return "bare"
+
+
+def strip_punctuation(text: str) -> str:
+    """Remove paseq, sof pasuq, nun hafukha and the acronym marks.
+
+    Deliberately separate from `strip_cantillation`. The maqaf is not in this
+    set: it joins two words into one stress unit, and removing it rewrites one
+    hyphenated word as two.
+    """
+    return "".join(
+        character for character in text if character not in PUNCTUATION
+    )
+
+
+def for_speech(text: str) -> str:
+    """Text prepared for a speech synthesizer.
+
+    Cantillation and punctuation confuse it without helping, and the vowels are
+    what it actually needs. The maqaf stays, because it is how the synthesizer
+    knows two words share one stress.
+    """
+    return strip_punctuation(strip_cantillation(normalize(text)))
 
 
 def consonantal_skeleton(text: str) -> str:

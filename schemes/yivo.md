@@ -87,7 +87,6 @@ file records what its source prints, so there is no shin-dot row here.
 |---|---|---|
 | אַ | pasekh alef | a |
 | אָ | komets alef | o |
-| יִ | khirik yud | i |
 
 ## Letter combinations
 
@@ -125,10 +124,12 @@ This is an addition to the source's coverage rather than a change to its values.
 
 Every letter in Yiddish also works as a vowel or a consonant depending on where it
 sits, and YIVO's own table shows this by giving `י` yud two values, `y` and `i`.
-Only `y` is in the consonant table. `יִ` khirik yud, which is the spelling used
-when the vowel reading has to be made explicit, is in the vowel-letter table. A
-bare `י` is decided by position: it is the consonant when it opens a syllable and
-the vowel `i` otherwise.
+Only `y` is in the consonant table, because that is the only value the row's
+first half gives. The `i` reading is decided by position: a yud is the consonant
+when it opens a syllable and the vowel otherwise, and a yud carrying a khirik is
+the vowel outright, which is what the point is there to say. None of that is a
+table row here, because the source prints no such row; it is the source's own
+"y; i" resolved the way the source says to resolve it.
 
 The source gives no vowel points beyond pasekh and komets, because Yiddish does
 not use them. A Hebrew word quoted inside a Yiddish text keeps its Yiddish

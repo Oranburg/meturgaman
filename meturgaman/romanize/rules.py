@@ -57,10 +57,12 @@ __all__ = [
     "Analysis",
     "classify",
     "DAGESH_NONE", "DAGESH_LENE", "DAGESH_FORTE", "DAGESH_MAPIQ", "DAGESH_SHURUQ",
+    "DAGESH_EUPHONIC",
     "SHEVA_NONE", "SHEVA_NA", "SHEVA_NACH", "SHEVA_UNKNOWN",
     "QAMATS_NONE", "QAMATS_GADOL", "QAMATS_QATAN", "QAMATS_UNKNOWN",
     "ROLE_CONSONANT", "ROLE_MATER", "ROLE_SILENT",
-    "qamats_qatan_words",
+    "qamats_qatan_words", "sacred_names", "established_forms",
+    "load_rule_table", "rules_directory",
 ]
 
 DAGESH_NONE = "none"
@@ -68,6 +70,7 @@ DAGESH_LENE = "lene"
 DAGESH_FORTE = "forte"
 DAGESH_MAPIQ = "mapiq"
 DAGESH_SHURUQ = "shuruq"
+DAGESH_EUPHONIC = "euphonic"
 
 SHEVA_NONE = "none"
 SHEVA_NA = "na"
@@ -113,6 +116,8 @@ class Analysis:
     #: Set on the consonant that a following mater belongs to, so the resolver
     #: knows to take its vowel from the pair rather than from its own point.
     carries_full_vowel: str = ""
+    #: A furtive patah: written before its consonant rather than after it.
+    furtive: bool = False
     flags: list[Flag] = field(default_factory=list)
 
     @property
@@ -131,6 +136,72 @@ class Analysis:
 # ---------------------------------------------------------------------------
 # The one lexical list in the project, and why it exists
 # ---------------------------------------------------------------------------
+
+_RULE_TABLES: dict[str, dict[str, str]] = {}
+
+
+def rules_directory() -> Path | None:
+    """Where the scheme-independent rule files live, or None if not found."""
+    here = Path(__file__).resolve()
+    packaged = here.parent.parent / "data" / "rules"
+    if packaged.is_dir() and any(packaged.glob("*.md")):
+        return packaged
+    for parent in here.parents:
+        candidate = parent / "rules"
+        if candidate.is_dir() and any(candidate.glob("*.md")):
+            return candidate
+        if (parent / ".git").exists():
+            break
+    return None
+
+
+def load_rule_table(filename: str) -> dict[str, str]:
+    """Read a two-column markdown table from `rules/`, keyed by Hebrew skeleton.
+
+    The first column is Hebrew and the second is what to write. Both are read
+    from the first markdown table in the file; anything after a third column is
+    a note for a person and is ignored.
+
+    These files are documents for the same reason the scheme files are. A word
+    list buried in code is a word list nobody checks, and each of these
+    overrides the tables in some way, so each one needs to be able to say why.
+    """
+    if filename in _RULE_TABLES:
+        return _RULE_TABLES[filename]
+
+    directory = rules_directory()
+    table: dict[str, str] = {}
+    if directory is None or not (directory / filename).exists():
+        _RULE_TABLES[filename] = table
+        return table
+
+    for line in (directory / filename).read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line.startswith("|") or set(line) <= set("|-: "):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 2:
+            continue
+        if cells[0].lower() in ("hebrew", "word", "form", "sign", "letter"):
+            continue
+        skeleton = hebrew.consonantal_skeleton(cells[0])
+        written = cells[1].strip()
+        if skeleton and written:
+            table[skeleton] = written
+
+    _RULE_TABLES[filename] = table
+    return table
+
+
+def sacred_names() -> dict[str, str]:
+    """Names written as a fixed form rather than romanized. See rules/sacred-names.md."""
+    return load_rule_table("sacred-names.md")
+
+
+def established_forms() -> dict[str, str]:
+    """Words with a settled English spelling. See rules/established-forms.md."""
+    return load_rule_table("established-forms.md")
+
 
 _QAMATS_QATAN_WORDS: frozenset[str] | None = None
 
@@ -220,6 +291,13 @@ def _classify_dagesh(word: Word, analyses: list[Analysis]) -> None:
                 analysis.dagesh_kind = DAGESH_FORTE
             else:
                 analysis.dagesh_kind = DAGESH_LENE
+        elif previous is None:
+            # A dagesh in the first letter of a word, in a letter that has no
+            # lene form, is euphonic: it joins the word to the one before it
+            # rather than doubling anything. SBL note 5 is explicit, giving
+            # `מַה־שְּׁמ` as *mah-šĕmô* rather than *mah-ššĕmô*. Doubling it
+            # produced `llemor` for `לֵּאמֹר`.
+            analysis.dagesh_kind = DAGESH_EUPHONIC
         else:
             # Any other letter can only be doubled.
             analysis.dagesh_kind = DAGESH_FORTE
@@ -228,6 +306,20 @@ def _classify_dagesh(word: Word, analyses: list[Analysis]) -> None:
 # ---------------------------------------------------------------------------
 # Pass 2: matres lectionis
 # ---------------------------------------------------------------------------
+
+def _assign_carrier(previous: Analysis, name: str) -> None:
+    """Record that a consonant's vowel is spelled out by the letter after it.
+
+    Refuses to hang the vowel on a letter that will not be written. A quiescent
+    alef is dropped from the output, so making it the carrier loses the vowel
+    with it: `לָאוֹר` came out *lar*, an entire syllable gone and no flag raised.
+    When the previous letter is silent, the vowel letter keeps the vowel and
+    writes it itself.
+    """
+    if previous.role == ROLE_SILENT:
+        return
+    previous.carries_full_vowel = name
+
 
 def _classify_matres(word: Word, analyses: list[Analysis]) -> None:
     """Decide which of alef, he, vav and yod are letters and which are vowels.
@@ -262,7 +354,7 @@ def _classify_matres(word: Word, analyses: list[Analysis]) -> None:
                 analysis.role = ROLE_MATER
                 if previous is not None and previous.cluster.vowel == hebrew.QAMATS:
                     analysis.full_vowel = "qamats_he"
-                    previous.carries_full_vowel = "qamats_he"
+                    _assign_carrier(previous, "qamats_he")
             continue
 
         if cluster.base == hebrew.VAV:
@@ -271,16 +363,21 @@ def _classify_matres(word: Word, analyses: list[Analysis]) -> None:
                 hebrew.HOLAM_HASER_FOR_VAV,
             ):
                 # Holam written on a vav. A mater only when the letter before it
-                # is waiting for a vowel.
-                if previous is not None and not previous.cluster.has_full_vowel:
+                # carries no vowel of any kind and is therefore waiting for one.
+                #
+                # The test is `has_vowel`, not `has_full_vowel`. A consonant with
+                # a sheva already has a vowel, reduced but present, and closes
+                # its syllable, so the vav after it is a consonant. Asking for a
+                # full vowel made `מִצְוֹת` into *mitsot* instead of *mitsvot*.
+                if previous is not None and not previous.cluster.has_vowel:
                     analysis.role = ROLE_MATER
                     analysis.full_vowel = "holam_male"
-                    previous.carries_full_vowel = "holam_male"
+                    _assign_carrier(previous, "holam_male")
             elif not cluster.has_vowel and previous is not None:
                 if previous.cluster.vowel == hebrew.HOLAM:
                     analysis.role = ROLE_MATER
                     analysis.full_vowel = "holam_male"
-                    previous.carries_full_vowel = "holam_male"
+                    _assign_carrier(previous, "holam_male")
             continue
 
         if cluster.base == hebrew.YOD:
@@ -294,13 +391,17 @@ def _classify_matres(word: Word, analyses: list[Analysis]) -> None:
             named = {
                 hebrew.HIREQ: "hireq_male",
                 hebrew.TSERE: "tsere_male",
-                hebrew.SEGOL: "tsere_male",
+                # A segol followed by a yod is its own sequence. It used to be
+                # mapped to `tsere_male`, which meant SBL general's documented
+                # `ei` deviation, stated for tsere yod only, leaked onto it and
+                # gave `yadeikha` for `יָדֶיךָ` instead of `yadekha`.
+                hebrew.SEGOL: "segol_male",
                 hebrew.PATAH: "patah_male",
             }.get(preceding or "")
             if named:
                 analysis.role = ROLE_MATER
                 analysis.full_vowel = named
-                previous.carries_full_vowel = named
+                _assign_carrier(previous, named)
 
 
 # ---------------------------------------------------------------------------
@@ -359,22 +460,37 @@ def _classify_qamats(word: Word, analyses: list[Analysis]) -> None:
             analysis.qamats_kind = QAMATS_QATAN
             continue
 
-        # A closed unaccented syllable: this letter, then a consonant carrying a
-        # sheva, then more word. Short, unless a meteg said otherwise, and the
-        # meteg may simply be absent from the edition.
+        # A qamats before a consonant carrying a sheva. This shape is where a
+        # short qamats lives, and it is tempting to read it as one. Do not.
+        #
+        # An earlier version did, on the theory that a missing meteg was
+        # evidence of a short vowel. Tested against 1,934 words of Genesis,
+        # Psalms, Deuteronomy, Exodus and Leviticus, it fired fifteen times and
+        # was wrong fifteen times: `הָיְתָה` came out *hoytah* for *haytah*,
+        # `לָיְלָה` *loylah* for *laylah*, `לְבָבְךָ` *levovkha* for *levavkha*.
+        #
+        # The reasoning was wrong at its root. Masoretic editions print meteg on
+        # some long qamats and not others, so its absence is not evidence of
+        # anything. And the damage compounded, because the sheva pass reads
+        # `qamats_kind` and silences the sheva, so one bad call corrupted the
+        # vowel and the syllable together.
+        #
+        # Long is the commoner reading by a wide margin, so long is the answer,
+        # and the flag says the shape is one a reader should check.
         if (
             following is not None
             and following.cluster.is_sheva
             and index + 1 < last
         ):
-            analysis.qamats_kind = QAMATS_QATAN
+            analysis.qamats_kind = QAMATS_GADOL
             analysis.flags.append(
                 Flag(
-                    code="qamats-qatan-assumed",
+                    code="qamats-may-be-short",
                     message=(
-                        "qamats before a silent sheva read as short (o). A meteg "
-                        "on the qamats would make it long (a); this edition has "
-                        "none here."
+                        "read long (a), which is the commoner reading of this "
+                        "shape. A few words take a short qamats (o) here and are "
+                        "listed in rules/qamats-qatan.md; check the word if it "
+                        "matters"
                     ),
                     word=word.raw,
                     position=index,
@@ -434,6 +550,30 @@ def _classify_sheva(word: Word, analyses: list[Analysis]) -> None:
             continue
 
         preceding_vowel = previous.cluster.vowel
+
+        # A yod or vav carrying a sheva after a vowel is the second half of a
+        # diphthong, not a syllable of its own: `הָיְתָה` is *haytah* and
+        # `לָיְלָה` is *laylah*. Treating the sheva as vocal gave *hayetah* and
+        # *layelah*, inserting a syllable the word does not have.
+        if (
+            cluster.base in (hebrew.YOD, hebrew.VAV)
+            and preceding_vowel is not None
+            and preceding_vowel != hebrew.SHEVA
+        ):
+            analysis.sheva_kind = SHEVA_NACH
+            continue
+
+        # The second person singular suffix `ךָ` closes the syllable before it,
+        # so the sheva on that syllable's last consonant is silent: `לְבָבְךָ` is
+        # *levavkha*, not *levavekha*.
+        if (
+            following.cluster.letter == hebrew.FINAL_KAF
+            and following.cluster.vowel == hebrew.QAMATS
+            and index + 1 == last
+        ):
+            analysis.sheva_kind = SHEVA_NACH
+            continue
+
         if previous.role == ROLE_MATER or previous.carries_full_vowel:
             analysis.sheva_kind = SHEVA_NA
             continue
@@ -441,12 +581,32 @@ def _classify_sheva(word: Word, analyses: list[Analysis]) -> None:
             analysis.sheva_kind = SHEVA_NA
             continue
         if preceding_vowel == hebrew.QAMATS:
-            # Long qamats leaves an open syllable and a vocal sheva; short
-            # qamats closes it and silences the sheva. Pass three already
-            # decided which.
-            analysis.sheva_kind = (
-                SHEVA_NACH if previous.qamats_kind == QAMATS_QATAN else SHEVA_NA
-            )
+            # Long qamats generally leaves an open syllable and a vocal sheva;
+            # short qamats closes it and silences the sheva. Pass three decided
+            # which.
+            #
+            # "Generally" is doing real work in that sentence. `שָׁרְצוּ` is
+            # *sharetsu* with a vocal sheva and `לְבָבְךָ` is *levavkha* with a
+            # silent one, and the two are written alike. Which it is depends on
+            # the word's pattern, which is the case the Library of Congress
+            # sends its cataloguers to a dictionary for. Vocal is the commoner
+            # reading and is what is written; the flag says to check.
+            if previous.qamats_kind == QAMATS_QATAN:
+                analysis.sheva_kind = SHEVA_NACH
+            else:
+                analysis.sheva_kind = SHEVA_NA
+                analysis.flags.append(
+                    Flag(
+                        code="sheva-after-qamats",
+                        message=(
+                            "read as vocal, which is the commoner reading after a "
+                            "long qamats. Some words take a silent sheva here and "
+                            "the spelling does not say which; check if it matters"
+                        ),
+                        word=word.raw,
+                        position=index,
+                    )
+                )
             continue
         if preceding_vowel in (
             hebrew.PATAH,
@@ -479,6 +639,48 @@ def _classify_sheva(word: Word, analyses: list[Analysis]) -> None:
 # The public entry point
 # ---------------------------------------------------------------------------
 
+def _classify_furtive_patah(word: Word, analyses: list[Analysis]) -> None:
+    """Find the patah that is pronounced before its own consonant.
+
+    A patah under a word-final ḥet, ayin, or he with a mapiq is spoken ahead of
+    that letter rather than after it: `כֹּחַ` is *koaḥ* and `רוּחַ` is *ruaḥ*.
+
+    Getting this wrong is not a cosmetic slip. Writing the vowel after the
+    consonant gives *koḥa*, which is a different word, and in a scheme that marks
+    ayin it produces *koʿaḥ*, inventing a consonant that is not in the text.
+
+    The condition is narrow on purpose: only at the end of a word, only under
+    those three letters, and only when a vowel already precedes, since a furtive
+    patah is by definition an extra glide into a syllable that already has a
+    nucleus.
+    """
+    if len(analyses) < 2:
+        return
+    last = analyses[-1]
+    cluster = last.cluster
+
+    if cluster.vowel != hebrew.PATAH:
+        return
+    if cluster.base not in (hebrew.HET, hebrew.AYIN, hebrew.HE):
+        return
+    if cluster.base == hebrew.HE and not cluster.dagesh:
+        # A bare final he is a vowel letter, not a consonant, so there is no
+        # furtive patah. Only a mapiq he takes one.
+        return
+
+    for earlier in analyses[:-1]:
+        # A vowel letter counts as a nucleus just as a point does: `רוּחַ` has its
+        # vowel in the shuruq, and the patah under the ḥet is furtive all the
+        # same.
+        if (
+            earlier.cluster.has_full_vowel
+            or earlier.carries_full_vowel
+            or earlier.role == ROLE_MATER
+        ):
+            last.furtive = True
+            return
+
+
 def classify(word: Word) -> list[Analysis]:
     """Run every pass over one word and return an Analysis per cluster."""
     analyses = [Analysis(cluster=cluster) for cluster in word]
@@ -489,4 +691,5 @@ def classify(word: Word) -> list[Analysis]:
     _classify_matres(word, analyses)
     _classify_qamats(word, analyses)
     _classify_sheva(word, analyses)
+    _classify_furtive_patah(word, analyses)
     return analyses

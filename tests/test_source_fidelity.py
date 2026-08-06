@@ -46,40 +46,27 @@ SCHEMES = sorted(all_schemes().items())
 _NOT_EXTRACTABLE: dict[str, dict[str, str]] = {
     "encyclopaedia-judaica-scientific": {
         "ḏ": "drawn rule under the d, not a combining character; visible at 900 dpi",
-        "ṯ": "drawn rule under the t",
-        "å": "extraction returns a bare a for this ring-above glyph",
-        "æ": "ligature the font encodes outside the extracted range",
-        "œ": "ligature the font encodes outside the extracted range",
-        "ə": "extraction returns Cyrillic ә U+04D9 for this schwa",
-        "ǧ": "caron drawn rather than encoded",
-        "ž": "caron drawn rather than encoded",
-        "č": "caron drawn rather than encoded",
-        "ṣ": "dot below drawn rather than encoded",
-        "ś": "acute drawn rather than encoded",
-        "š": "caron drawn rather than encoded",
-        "ṭ": "dot below drawn rather than encoded",
-        "ḥ": "dot below drawn rather than encoded",
-        "ʾ": "half ring rendered from a private-use slot",
-        "ʿ": "half ring rendered from a private-use slot",
-    },
-    "encyclopaedia-judaica-general": {
-        "ẓ": "dot below drawn rather than encoded",
-        "ḥ": "dot below drawn rather than encoded",
-    },
-    "bgn-pcgn": {
-        # The vowel glyphs in this PDF all decode as patah through a broken font
-        # encoding, which is recorded in the scheme file itself.
-        "ẖ": "printed with its Unicode value 1E96 stated in the table's own column",
-    },
-    "ala-lc-yiddish": {
-        "s̀": (
-            "the combining grave lands after the closing parenthesis in "
-            "extraction; the codepoint U+0300 is in the text stream and the "
-            "mark is visible at 600 dpi"
+        "ṯ": "drawn rule under the t, likewise",
+        "ə": (
+            "the text stream holds U+04D9 CYRILLIC SMALL LETTER SCHWA for this "
+            "glyph, almost certainly a font substitution; the scheme file uses "
+            "the Latin U+0259 and says so"
         ),
     },
 }
 
+# Every entry above was checked by re-extracting the document. An earlier
+# version of this list carried seventeen more, and every one of them named a
+# character that is present in the extracted text. Because the test consults
+# this list before it consults the document, each of those entries silently
+# switched off a real check, which is worse than having no test: it was a
+# written record that a character had been verified when nothing had verified
+# it. Two of them were covering actual errors, `ǧ` where the source prints `ğ`
+# and a schwa whose codepoint differs.
+#
+# So the rule for this list is now: an entry is a claim that the character is on
+# the page and that extraction cannot see it, and a test below checks that the
+# claim is not merely unfalsifiable.
 
 @lru_cache(maxsize=8)
 def _extracted(filename: str) -> str:
@@ -232,3 +219,25 @@ def test_ala_lc_keeps_three_distinct_s_sounds():
         f"expected three distinct s values, got {samekh!r}, {sin!r}, {tav!r}"
     )
     assert tav == "s̀", f"Yiddish tav should be s plus U+0300, got {tav!r}"
+
+
+@pytest.mark.parametrize("name,scheme", SCHEMES, ids=[n for n, _ in SCHEMES])
+def test_every_exception_is_actually_unextractable(name: str, scheme: Scheme):
+    """An excuse must name a character the extraction genuinely cannot see.
+
+    Without this, the exceptions list becomes a way to make the fidelity test
+    pass. Seventeen of its entries once named characters that were sitting in
+    the extracted text, and each one switched off a check that would otherwise
+    have run.
+    """
+    allowed = _NOT_EXTRACTABLE.get(name, {})
+    if not allowed:
+        return
+    text = _requires(scheme)
+    false_excuses = [
+        character for character in allowed if character in text
+    ]
+    assert not false_excuses, (
+        f"{name} excuses {false_excuses} as unextractable, but they are in the "
+        f"extracted text. Either the excuse is wrong or the value is."
+    )

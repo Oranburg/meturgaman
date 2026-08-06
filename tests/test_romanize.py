@@ -37,26 +37,38 @@ def test_qamats_qatan_before_a_silent_sheva():
     Two faults at once in the old engine: it read the qamats as long and the
     sheva as vocal. They are linked, and getting the qamats right is what makes
     the sheva silent.
+
+    It is decided here by the lexical list rather than by a rule, and no flag
+    fires, because the word is known. See the test below for why that is the
+    right division of labour.
     """
     result = romanize("חָכְמָה")
     assert result.text == "ḥokhmah"
-    assert any(flag.code == "qamats-qatan-assumed" for flag in result.flags), (
-        "the reading is right but unflagged; a meteg would have made it ḥakhmah "
-        "and the reader has no way to know which the edition meant"
-    )
+
+
+def test_the_same_shape_stays_long_when_the_word_is_not_in_the_list():
+    """The shape `חָכְמָה` has is not enough to decide, and the engine says so.
+
+    An earlier version read every qamats before a sheva as short. Tested against
+    1,934 words of running text it fired fifteen times and was wrong fifteen
+    times, giving *hoytah* for `הָיְתָה` and *levovkha* for `לְבָבְךָ`. Long is now
+    the answer and a flag marks the shape.
+    """
+    for word, expected in (("הָיְתָה", "haytah"), ("שָׁרְצוּ", "sharetsu")):
+        result = romanize(word)
+        assert result.text == expected, f"{word}: {result.text}"
+
+    flagged = romanize("שָׁרְצוּ")
+    assert any(
+        flag.code in ("qamats-may-be-short", "sheva-after-qamats")
+        for flag in flagged.flags
+    ), "the shape is ambiguous and nothing said so"
 
 
 def test_meteg_makes_the_qamats_long():
-    """The other side of the same rule: with a meteg, the qamats is long.
-
-    `שָֽׁמְרָה` and `חָכְמָה` are written alike apart from this mark, and they are
-    shamrah and ḥokhmah. Reading the meteg is what tells them apart, and it is
-    why the flag above matters when the meteg is absent.
-    """
-    with_meteg = "שָֽׁמְרָה"
-    result = romanize(with_meteg)
+    """A meteg marks the syllable as open or accented, so the qamats is long."""
+    result = romanize("שָֽׁמְרָה")
     assert result.text.startswith("sha"), result.text
-    assert not any(flag.code == "qamats-qatan-assumed" for flag in result.flags)
 
 
 def test_maqaf_becomes_a_hyphen():
@@ -184,7 +196,7 @@ def test_no_scheme_is_undetectable():
 def test_reverse_recovers_the_consonantal_skeleton():
     """Latin back to Hebrew letters, on the skeleton only."""
     candidate = reverse.reverse("shalom", "sbl-general")[0]
-    assert candidate.letters == "שׁלמ"
+    assert candidate.letters == "שׁלם", "the last letter must take its final form"
     assert candidate.is_certain
 
 

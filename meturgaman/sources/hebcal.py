@@ -44,7 +44,22 @@ _LIMIT = RateLimit(requests=80, seconds=10.0, name="hebcal")
 SEPHARDI = "s"
 ASHKENAZI = "a"
 
-_SPEC_PATH = Path(__file__).resolve().parent.parent.parent / "docs" / "api" / "hebcal-openapi.json"
+def _find_spec() -> Path | None:
+    """The committed OpenAPI document, packaged or in the checkout."""
+    here = Path(__file__).resolve()
+    packaged = here.parent.parent / "data" / "api" / "hebcal-openapi.json"
+    if packaged.exists():
+        return packaged
+    for parent in here.parents:
+        candidate = parent / "docs" / "api" / "hebcal-openapi.json"
+        if candidate.exists():
+            return candidate
+        if (parent / ".git").exists():
+            break
+    return None
+
+
+_SPEC_PATH = _find_spec()
 
 
 @lru_cache(maxsize=1)
@@ -54,7 +69,7 @@ def _spec() -> dict[str, Any]:
     Absent means validation is skipped rather than that everything fails. The
     document is a check on this code, not a dependency of it.
     """
-    if not _SPEC_PATH.exists():
+    if _SPEC_PATH is None or not _SPEC_PATH.exists():
         return {}
     try:
         return json.loads(_SPEC_PATH.read_text(encoding="utf-8"))
@@ -110,9 +125,24 @@ def _validate(path: str, params: dict[str, Any]) -> dict[str, Any]:
 
 
 #: Every locale Hebcal documents, read from the spec.
+#:
+#: When the spec cannot be found this is a four-value stub rather than the
+#: twenty-two Hebcal publishes, and `_validate` becomes a no-op. That used to
+#: happen silently after a non-editable install, so the module went on promising
+#: that "a parameter this code accepts is a parameter Hebcal documents" while
+#: checking nothing. `spec_is_loaded()` reports it and the CLI prints a warning.
 LOCALES: tuple[str, ...] = tuple(
     parameters_for("/hebcal").get("lg", {}).get("enum", ["s", "a", "h", "he"])
 )
+
+
+def spec_is_loaded() -> bool:
+    """Whether the committed OpenAPI document was found.
+
+    False means parameter validation is off. Worth saying out loud, because the
+    failure is otherwise invisible: requests still go out and mostly work.
+    """
+    return bool(_spec())
 
 #: The Ashkenazi ones, for a reader who wants Shabbos rather than Shabbat.
 ASHKENAZI_LOCALES: tuple[str, ...] = tuple(
@@ -184,6 +214,36 @@ class Day:
     attribution: str = ATTRIBUTION
 
 
+def to_gregorian(year: int, month: str, day: int) -> date:
+    """Convert a Hebrew date to its Gregorian equivalent.
+
+    The other direction. `month` is the English name Hebcal uses: Tishrei,
+    Cheshvan, Kislev, Tevet, Sh'vat, Adar, Adar I, Adar II, Nisan, Iyyar, Sivan,
+    Tamuz, Av, Elul.
+
+        >>> to_gregorian(5786, "Av", 25)
+        datetime.date(2026, 8, 8)
+    """
+    params = _validate(
+        "/converter",
+        {"cfg": "json", "h2g": "1", "hy": year, "hm": month, "hd": day, "strict": "1"},
+    )
+    payload = get_json(
+        f"{BASE}/converter", params, limiter=_LIMIT, service="hebcal",
+        attribution=ATTRIBUTION,
+    ).payload
+    if not isinstance(payload, dict):
+        raise LookupError(f"Hebcal returned an unexpected shape for {day} {month} {year}")
+    parts = payload.get("gy"), payload.get("gm"), payload.get("gd")
+    if not all(isinstance(part, int) for part in parts):
+        raise LookupError(
+            f"Hebcal returned no Gregorian date for {day} {month} {year}. "
+            f"Check the month name; it takes English names such as 'Av' and "
+            f"'Adar II'."
+        )
+    return date(parts[0], parts[1], parts[2])  # type: ignore[arg-type]
+
+
 def convert(
     when: date | str,
     *,
@@ -194,6 +254,8 @@ def convert(
 
     `after_sunset` matters and is easy to forget: the Hebrew day begins in the
     evening, so a Tuesday evening is already Wednesday's Hebrew date.
+
+    `to_gregorian` goes the other way.
     """
     when = date.fromisoformat(when) if isinstance(when, str) else when
     params = _validate(
@@ -212,6 +274,8 @@ def convert(
         f"{BASE}/converter", params, limiter=_LIMIT, service="hebcal",
         attribution=ATTRIBUTION,
     ).payload
+    if not isinstance(payload, dict):
+        raise LookupError(f"Hebcal returned an unexpected shape for {when}")
     return HebrewDate(
         year=int(payload.get("hy") or 0),
         month=str(payload.get("hm") or ""),
@@ -242,13 +306,13 @@ def leyning(
         f"{BASE}/leyning", params, limiter=_LIMIT, service="hebcal",
         attribution=ATTRIBUTION,
     ).payload
-    items = payload.get("items") or []
+    items = (payload or {}).get("items") or [] if isinstance(payload, dict) else []
     if not items:
         return None
     entry = items[0]
     return Reading(
-        name=str(entry.get("name", {}).get("en") or entry.get("parsha") or ""),
-        hebrew_name=str(entry.get("name", {}).get("he") or ""),
+        name=str((entry.get("name") or {}).get("en") or entry.get("parsha") or ""),
+        hebrew_name=str((entry.get("name") or {}).get("he") or ""),
         summary=str(entry.get("summary") or ""),
         haftarah=str(entry.get("haftara") or ""),
         aliyot=[
@@ -278,7 +342,9 @@ def zmanim(
     rather than quietly answering for somewhere else.
     """
     when = date.fromisoformat(when) if isinstance(when, str) else when
-    if geonameid is None and not zip_code and latitude is None:
+    if geonameid is None and not zip_code and (
+        latitude is None or longitude is None or not tzid
+    ):
         raise ValueError(
             "zmanim needs a location: pass geonameid, zip_code, or "
             "latitude with longitude and tzid"
@@ -387,7 +453,7 @@ def read_day(
     study_entries: list[StudyEntry] = []
     reading: Reading | None = None
 
-    for item in payload.get("items") or []:
+    for item in (payload.get("items") or [] if isinstance(payload, dict) else []):
         category = str(item.get("category") or "")
         title = str(item.get("title") or "")
         if category in ("dafyomi", "mishnayomi", "nachyomi", "yerushalmi", "chofetzChaim", "dailyRambam", "shemirat"):
@@ -417,7 +483,10 @@ def read_day(
     if reading is None:
         # The parashah is announced on Shabbat. On a weekday, look ahead to the
         # coming one rather than reporting nothing.
-        ahead = when + timedelta(days=(5 - when.weekday()) % 7)
+        try:
+            ahead = when + timedelta(days=(5 - when.weekday()) % 7)
+        except OverflowError:
+            ahead = when
         reading = leyning(ahead, israel=israel)
 
     return Day(

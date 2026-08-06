@@ -41,6 +41,7 @@ _FULL_VOWEL_KEYS = (
     "holam_male",
     "shuruq",
     "patah_male",
+    "segol_male",
     "qamats_he",
 )
 
@@ -177,6 +178,11 @@ def _vowel_value(
     point = cluster.vowel
     if point == hebrew.QAMATS and analysis.qamats_kind == QAMATS_QATAN:
         point = hebrew.QAMATS_QATAN
+    if point == hebrew.HOLAM_HASER_FOR_VAV:
+        # U+05BA is a spelling variant of holam that no published table prints a
+        # row for, and Sefaria's Masoretic edition uses it routinely. Reading it
+        # as the holam it is beats raising on the Thirteen Attributes.
+        point = hebrew.HOLAM
 
     gaps = {
         "hataf_qamats": hebrew.HATAF_QAMATS,
@@ -272,7 +278,18 @@ def _prefix_length(word: Word, analyses: list[Analysis]) -> int:
         hebrew.QAMATS,
         hebrew.SEGOL,
     ):
-        if following.dagesh_kind == DAGESH_FORTE or following.cluster.is_guttural:
+        if following.dagesh_kind == DAGESH_FORTE:
+            return 1
+        # A guttural refuses the dagesh and lengthens the article's vowel
+        # instead, so `הָאָרֶץ` is the article with no dot to show it. Resh is
+        # excluded even though it behaves like a guttural elsewhere, and a word
+        # of only two letters is excluded outright: with both in, `הַר` split
+        # into `ha-r`, leaving a bare consonant with no vowel, and `הָרִים`
+        # became `ha-rim`.
+        if (
+            len(analyses) >= 3
+            and following.cluster.base in (hebrew.ALEF, hebrew.HE, hebrew.HET, hebrew.AYIN)
+        ):
             return 1
 
     if first.base == hebrew.VAV and (
@@ -284,13 +301,47 @@ def _prefix_length(word: Word, analyses: list[Analysis]) -> int:
 
 
 def romanize_word(
-    word: Word, scheme: Scheme, flags: list[Flag] | None = None
+    word: Word,
+    scheme: Scheme,
+    flags: list[Flag] | None = None,
+    *,
+    literal: bool = False,
+    established: bool = False,
 ) -> str:
-    """Romanize one clustered Hebrew word."""
+    """Romanize one clustered Hebrew word.
+
+    `literal` turns off the sacred-name substitution, for work that needs the
+    letters as letters. `established` substitutes the conventional English
+    spelling where one exists rather than only naming it.
+    """
     collected = flags if flags is not None else []
 
     if not len(word):
         return ""
+
+    skeleton = hebrew.consonantal_skeleton(word.letters)
+
+    # A sacred name is written as its fixed form rather than romanized. This is
+    # the only place the tool overrides its own tables by default, and
+    # `rules/sacred-names.md` says why.
+    if not literal:
+        fixed = rules.sacred_names().get(skeleton)
+        if fixed:
+            return fixed
+
+    # A word English already knows how to spell. Named, not substituted, unless
+    # asked. See `rules/established-forms.md`.
+    conventional = rules.established_forms().get(skeleton)
+    if conventional:
+        if established:
+            return conventional
+        collected.append(
+            Flag(
+                code="established-form",
+                message=f"English usually spells this {conventional}",
+                word=word.raw,
+            )
+        )
 
     if scheme.script == "yiddish":
         # Pointed Hebrew put through a Yiddish table produces a consonant
@@ -372,14 +423,20 @@ def romanize_word(
 
         if analysis.role == ROLE_MATER:
             previous = body[index - 1] if index > 0 else None
-            # A final he spelling out a qamats: `תּוֹרָה`. Schemes that print a
-            # value for the pair use it and write nothing more. Schemes that do
-            # not, such as ALA-LC and BGN, write the qamats as an ordinary vowel
-            # and then the he as an ordinary consonant, which is how `torah`
-            # keeps its h.
-            if analysis.full_vowel == "qamats_he" and not str(
-                scheme.rule("qamats_he")
-            ):
+            # A vowel letter whose scheme states no value for the pair is
+            # written as the letter it is, and the vowel point it spells out is
+            # written on the consonant in the ordinary way.
+            #
+            # Two cases in practice. ALA-LC and BGN print no row for a final he
+            # after a qamats, so `תּוֹרָה` keeps its h and comes out `torah`. And
+            # SBL prints no row for a patah followed by a yod, so `חַי` keeps its
+            # yod and comes out `ḥay`. Without this the letter vanished and the
+            # word came out `tora` and `ḥa`.
+            key = analysis.full_vowel
+            if not key or (key in _FULL_VOWEL_KEYS and not str(scheme.rule(key))):
+                # Either the scheme states no value for the pair, or there is no
+                # pair: an unpointed `תורה` has a final he spelling out nothing.
+                # Writing the letter beats dropping it, which gave `tvr`.
                 return scheme.consonant(cluster.letter)
             # A vowel letter writes the pair's vowel only when the consonant it
             # serves did not already write it.
@@ -397,7 +454,15 @@ def romanize_word(
         # Alef is written when medial and voweled, and not at the start of a
         # word. BGN/PCGN note 1 states this explicitly and the other schemes
         # follow the same practice; `always_mark_alef` overrides it.
-        if cluster.base == hebrew.ALEF and not scheme.always_mark_alef and index == 0:
+        if (
+            cluster.base == hebrew.ALEF
+            and not scheme.always_mark_alef
+            and index == 0
+            and word.is_pointed
+        ):
+            # Word-initial alef is not written. Suppressed only in pointed text:
+            # in unpointed text every letter is all the reader gets, and `אב`
+            # came out as `v`.
             consonant = ""
 
         if analysis.dagesh_kind == DAGESH_FORTE:
@@ -415,8 +480,14 @@ def romanize_word(
             # The qamats on this consonant belongs to the suffix that follows.
             return consonant
 
-        return consonant + (_vowel_value(analysis, scheme, word, collected)
-                            if with_vowel else "")
+        vowel = _vowel_value(analysis, scheme, word, collected) if with_vowel else ""
+
+        if analysis.furtive:
+            # A furtive patah is spoken before its own consonant, so it is
+            # written before it: `koaḥ`, not `koḥa`.
+            return vowel + consonant
+
+        return consonant + vowel
 
     head = "".join(render(body[i], i) for i in range(min(prefix_clusters, len(body))))
     rest = "".join(render(body[i], i) for i in range(prefix_clusters, len(body)))
@@ -521,6 +592,12 @@ def _romanize_yiddish(word: Word, scheme: Scheme, flags: list[Flag]) -> str:
                     # Text written under one convention and romanized under the
                     # other lands here.
                     pieces.append(scheme.shin or scheme.sin)
+                elif base == hebrew.YOD and hebrew.HIREQ in form:
+                    # A yud carrying a khirik is the vowel outright. YIVO's
+                    # alphabet gives yud two values, "y; i", and the point is
+                    # what says which. There is no khirik-yud row in the source
+                    # and this file does not invent one.
+                    pieces.append("i")
                 elif base == hebrew.YOD and end == position + 1:
                     # Both Yiddish tables give yod two values, `y` and `i`, and
                     # leave the choice to position. A yod is the vowel when a
@@ -545,11 +622,17 @@ def _romanize_yiddish(word: Word, scheme: Scheme, flags: list[Flag]) -> str:
 # The public entry point
 # ---------------------------------------------------------------------------
 
-def romanize(text: str, scheme: Scheme | str | None = None) -> Romanization:
+def romanize(
+    text: str,
+    scheme: Scheme | str | None = None,
+    *,
+    literal: bool = False,
+    established: bool = False,
+) -> Romanization:
     """Romanize mixed text under a scheme, leaving everything non-Hebrew alone.
 
     >>> romanize("כָּל־הָאָרֶץ").text
-    'kol-ha-arets'
+    'kol-ha-’arets'
     """
     chosen = _resolve_scheme(scheme)
     flags: list[Flag] = []
@@ -558,9 +641,15 @@ def romanize(text: str, scheme: Scheme | str | None = None) -> Romanization:
     runs: list[Run] = segment(text)
     for run in runs:
         if run.kind != "hebrew" or run.word is None:
-            output.append(run.text)
+            # Sof pasuq, paseq and the rest are Hebrew punctuation, and passing
+            # them through leaves Hebrew characters in Latin output.
+            output.append(hebrew.strip_punctuation(run.text))
             continue
-        output.append(romanize_word(run.word, chosen, flags))
+        output.append(
+            romanize_word(
+                run.word, chosen, flags, literal=literal, established=established
+            )
+        )
         if run.trailing == hebrew.MAQAF:
             # SBL §5.1.1.4 note 9 makes this a hyphen. A scheme that wants a
             # space says so in its front matter rather than in code here.
