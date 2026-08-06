@@ -76,13 +76,18 @@ _ENTRY = re.compile(
 )
 
 
-def read_manifest(manifest: Path = MANIFEST) -> list[Source]:
+def read_manifest(manifest: Path | None = None) -> list[Source]:
     """Parse `sources/manifest.md` into Source records.
 
     Raises rather than returning a short list. A manifest that half-parses is
     worse than one that does not parse, because the missing entries would look
     like sources that simply are not required.
+
+    The default is resolved at call time rather than bound at definition time,
+    so a test that points MANIFEST elsewhere actually points this elsewhere.
     """
+    if manifest is None:
+        manifest = MANIFEST
     if not manifest.exists():
         raise FileNotFoundError(f"no manifest at {manifest}")
 
@@ -140,24 +145,43 @@ def main(argv: list[str] | None = None) -> int:
     )
     arguments = parser.parse_args(argv)
 
-    sources = read_manifest()
+    try:
+        sources = read_manifest()
+    except (FileNotFoundError, ValueError) as error:
+        # A broken manifest is a finding, not a crash site. Say what is wrong
+        # in one line instead of handing the reader a traceback.
+        print(f"FAILED   {error}", file=sys.stderr)
+        return 1
     failures = 0
 
     for source in sources:
         digest = source.on_disk_digest()
 
-        if digest == source.sha256 and not arguments.force:
-            print(f"ok       {source.path.name}  ({source.size:,} bytes)")
+        if digest == source.sha256 and (arguments.check or not arguments.force):
+            # `--check` outranks `--force` here: checking is read-only by
+            # definition, and the two flags together once reported every
+            # verified file as MISSING.
+            size = source.path.stat().st_size
+            if size != source.size:
+                # The bytes hash correctly, so the file is right and the
+                # manifest's stated size is the thing that is wrong.
+                print(f"ok       {source.path.name}  ({size:,} bytes on disk, "
+                      f"but the manifest says {source.size:,}; fix the manifest)")
+            else:
+                print(f"ok       {source.path.name}  ({size:,} bytes)")
             continue
 
-        if digest is not None and digest != source.sha256:
+        if digest is not None and digest != source.sha256 and not arguments.force:
             # A local copy that does not match. Never silently replace it: the
             # tables were built against whatever these bytes are, and knowing
             # they have drifted matters more than getting a fresh download.
+            # `--force` is the explicit request to replace it, and even then
+            # the download is verified against the manifest before writing.
             print(f"MISMATCH {source.path.name}")
             print(f"         on disk  {digest}")
             print(f"         manifest {source.sha256}")
-            print("         left in place. Investigate before trusting the tables.")
+            print("         left in place. Investigate before trusting the tables,")
+            print("         or re-fetch a manifest-verified copy with --force.")
             failures += 1
             continue
 

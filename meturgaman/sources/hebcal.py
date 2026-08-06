@@ -145,8 +145,12 @@ def spec_is_loaded() -> bool:
     return bool(_spec())
 
 #: The Ashkenazi ones, for a reader who wants Shabbos rather than Shabbat.
+#: Named exactly rather than matched by prefix: the spec's own table says `sh`
+#: is "Sephardic transliteration with Hebrew", which a prefix rule that took
+#: it (and would take a future `ar` or `az`) misfiled as Ashkenazi.
 ASHKENAZI_LOCALES: tuple[str, ...] = tuple(
-    value for value in LOCALES if value.startswith("a") or value == "sh"
+    value for value in LOCALES
+    if value in ("a", "ah") or value.startswith("ashkenazi")
 )
 
 
@@ -379,19 +383,23 @@ def yahrzeit(
     death_date = (
         date.fromisoformat(death_date) if isinstance(death_date, str) else death_date
     )
-    body = {
+    # The service wants its short names: y1, m1, d1, s1, t1, n1. The long
+    # spellings (year1, month1...) are silently ignored and the reply is an
+    # empty item list that looks like "no yahrzeits", which is how this
+    # function shipped broken and nothing noticed.
+    params = {
         "v": "yahrzeit",
         "cfg": "json",
         "years": years,
-        "type1": "Yahrzeit",
-        "sunset1": "on" if after_sunset else "off",
-        "name1": name or "Yahrzeit",
-        "day1": death_date.day,
-        "month1": death_date.month,
-        "year1": death_date.year,
+        "t1": "Yahrzeit",
+        "s1": "on" if after_sunset else "off",
+        "n1": name or "Yahrzeit",
+        "d1": death_date.day,
+        "m1": death_date.month,
+        "y1": death_date.year,
     }
-    payload = post_json(
-        f"{BASE}/yahrzeit", body, limiter=_LIMIT, service="hebcal",
+    payload = get_json(
+        f"{BASE}/yahrzeit", params, limiter=_LIMIT, service="hebcal",
         attribution=ATTRIBUTION,
     ).payload
     return list((payload or {}).get("items") or [])
