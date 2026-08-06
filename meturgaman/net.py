@@ -18,6 +18,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import tempfile
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -45,6 +47,11 @@ USER_AGENT = "meturgaman/0.1 (+https://github.com/Oranburg/meturgaman)"
 #: a day is short enough that a correction reaches the user quickly.
 CACHE_SECONDS = 24 * 60 * 60
 
+#: Set by the CLI's --no-cache flag. When true, nothing is read from or written
+#: to the cache, so a suspect answer can be refetched without hunting down and
+#: deleting the entry that produced it.
+CACHE_DISABLED = False
+
 
 class NetworkError(Exception):
     """A request failed, with the service and the reason named."""
@@ -65,21 +72,32 @@ class RateLimit:
     """A sliding window, so a burst of calls does not trip a service's limit."""
 
     def __init__(self, requests: int, seconds: float, name: str = "") -> None:
+        if requests < 1:
+            # A window that admits nothing would make wait() index an empty
+            # deque and never return. Refuse it at construction, loudly.
+            raise ValueError("a rate limit must admit at least one request")
         self.requests = requests
         self.seconds = seconds
         self.name = name
         self._times: deque[float] = deque()
+        # The two limiters below are module singletons, so any code that ever
+        # fetches from two threads shares them. The lock keeps the deque sane.
+        self._lock = threading.Lock()
 
     def wait(self) -> None:
-        now = time.monotonic()
-        while self._times and now - self._times[0] > self.seconds:
-            self._times.popleft()
-        if len(self._times) >= self.requests:
-            sleep_for = self.seconds - (now - self._times[0]) + 0.05
+        # A loop rather than recursion: a long queue of waiters must not grow
+        # the call stack, and each pass re-reads the clock after sleeping.
+        while True:
+            with self._lock:
+                now = time.monotonic()
+                while self._times and now - self._times[0] > self.seconds:
+                    self._times.popleft()
+                if len(self._times) < self.requests:
+                    self._times.append(now)
+                    return
+                sleep_for = self.seconds - (now - self._times[0]) + 0.05
             if sleep_for > 0:
                 time.sleep(sleep_for)
-            return self.wait()
-        self._times.append(now)
 
 
 def cache_directory() -> Path:
@@ -89,7 +107,14 @@ def cache_directory() -> Path:
         path = Path(override).expanduser()
     else:
         path = Path.home() / ".cache" / "meturgaman"
-    path.mkdir(parents=True, exist_ok=True)
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+    except FileExistsError:
+        # METURGAMAN_CACHE named an existing file. Say what is wrong instead
+        # of letting mkdir's traceback stand in for an explanation.
+        raise NetworkError(
+            f"METURGAMAN_CACHE points at a file, not a directory: {path}"
+        ) from None
     return path
 
 
@@ -97,7 +122,9 @@ def clear_cache() -> int:
     """Delete every cached response. Returns how many files went."""
     removed = 0
     for entry in cache_directory().glob("*.json"):
-        entry.unlink()
+        # missing_ok because two processes may clear at once, and losing the
+        # race to delete a file is the outcome we wanted anyway.
+        entry.unlink(missing_ok=True)
         removed += 1
     return removed
 
@@ -108,26 +135,55 @@ def _cache_path(key: str) -> Path:
 
 
 def _read_cache(key: str) -> Any | None:
+    if CACHE_DISABLED:
+        return None
     path = _cache_path(key)
-    if not path.exists():
-        return None
-    if time.time() - path.stat().st_mtime > CACHE_SECONDS:
-        return None
     try:
+        # stat and read both live inside the try: another process can delete
+        # the entry between any two of these calls, and a vanished cache file
+        # means refetch, never a traceback.
+        if time.time() - path.stat().st_mtime > CACHE_SECONDS:
+            return None
         return json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        # A damaged cache entry is not worth an error. Refetch.
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        # A missing or damaged cache entry is not worth an error. Refetch.
         return None
 
 
 def _write_cache(key: str, payload: Any) -> None:
+    if CACHE_DISABLED:
+        return
     try:
-        _cache_path(key).write_text(
-            json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+        path = _cache_path(key)
+        # Write to a private temporary file and rename it into place. A plain
+        # write_text let two concurrent processes interleave their bytes, and
+        # a reader saw a half-written entry. os.replace is atomic on POSIX,
+        # so a reader sees the old entry or the new one, never a mixture.
+        handle, tmp_name = tempfile.mkstemp(
+            dir=path.parent, prefix=path.stem, suffix=".tmp"
         )
+        try:
+            with os.fdopen(handle, "w", encoding="utf-8") as tmp:
+                tmp.write(json.dumps(payload, ensure_ascii=False))
+            os.replace(tmp_name, path)
+        except BaseException:
+            os.unlink(tmp_name)
+            raise
     except (OSError, TypeError):
         # Caching is an optimization. Failing to cache is not failing.
         pass
+
+
+def _is_error_payload(payload: Any) -> bool:
+    """True when a 200 response is really the service reporting a failure.
+
+    Sefaria and Hebcal both answer some failures with HTTP 200 and an `error`
+    key in the body. Caching one of those kept a transient failure alive for a
+    day: the service recovered in seconds and this tool kept repeating its
+    outage. Answers that are legitimately negative, such as `is_ref: false`
+    for a non-reference, carry no `error` key and are still cached.
+    """
+    return isinstance(payload, dict) and bool(payload.get("error"))
 
 
 def _request(
@@ -138,6 +194,12 @@ def _request(
     timeout: float = 30.0,
     service: str = "",
 ) -> bytes:
+    scheme = urllib.parse.urlsplit(url).scheme.lower()
+    if scheme not in ("http", "https"):
+        # urllib happily opens file:// and ftp:// URLs, and audio download
+        # URLs arrive from an API response rather than from this codebase.
+        # A poisoned response must not be able to read local files.
+        raise NetworkError(f"refusing a non-HTTP URL: {url}")
     combined = {"User-Agent": USER_AGENT, "Accept": "application/json"}
     if headers:
         combined.update(headers)
@@ -213,7 +275,7 @@ def get_json(
             f"{raw[:200]!r}"
         ) from error
 
-    if use_cache:
+    if use_cache and not _is_error_payload(payload):
         _write_cache(full, payload)
     return Fetched(payload=payload, url=full, from_cache=False, attribution=attribution)
 
@@ -256,7 +318,7 @@ def post_json(
             f"{service or url} returned something that is not JSON"
         ) from error
 
-    if use_cache:
+    if use_cache and not _is_error_payload(payload):
         _write_cache(key, payload)
     return Fetched(payload=payload, url=url, from_cache=False, attribution=attribution)
 
