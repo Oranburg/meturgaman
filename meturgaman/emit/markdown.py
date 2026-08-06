@@ -206,6 +206,10 @@ def study_file(
             if (observation.edition.actual_language or observation.edition.language or "")
             .lower()
             .startswith("he")
+            # An edition can be listed for a reference and hold no text at it.
+            # Taking the first Hebrew edition regardless produced a file with a
+            # heading, a provenance list, and no passage.
+            and observation.segments
         ),
         None,
     )

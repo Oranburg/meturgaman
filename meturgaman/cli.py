@@ -105,6 +105,9 @@ def _study(arguments) -> int:
         "file": markdown.study_file,
     }[arguments.tier](reading, scheme=arguments.scheme)
     print(rendered.text)
+    for observation in reading.observations:
+        for warning in observation.warnings:
+            print(f"  {observation.edition.title}: {warning}", file=sys.stderr)
     if rendered.flags and not arguments.quiet:
         print(file=sys.stderr)
         _print_flags(dict.fromkeys(rendered.flags))
