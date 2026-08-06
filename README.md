@@ -190,6 +190,36 @@ one place do not count as two. `meturgaman compare` then reports where
 editions actually differ, on the consonantal skeleton, with vocalization
 recorded as apparatus rather than as disagreement.
 
+## Checking a draft
+
+```
+$ meturgaman verify chapter.md
+resolved    'Genesis 1:1' -> Genesis 1:1
+found       בראשית ברא אלהים את השמים ואת...  in Genesis 1:1
+NOT FOUND   בראשית ברא משה את הארץ ואת...  checked against Genesis 1:2
+```
+
+`verify` finds every citation in a manuscript with Sefaria's own reference
+finder, validates each one, and checks every Hebrew quotation of three words
+or more against the fetched text of the passages cited in its paragraph.
+Matching runs on the consonantal skeleton, so pointing and cantillation
+differences do not defeat a genuine quotation while a reworded one still
+fails. Exit code 0 means everything resolved and every quotation was found;
+"not found" is a flag to check, never proof of fabrication.
+
+## Daily learning
+
+```
+meturgaman daf                        # today's daf yomi, fetched
+meturgaman daf --cycle "Daily Mishnah"
+meturgaman study "Bava Metzia 75b:11" --sugya --tier block
+meturgaman study "Genesis 1" --tier file --output ~/notes/
+```
+
+`daf` fetches any learning cycle's reading directly. `study --sugya` expands
+a Talmud reference to its mapped passage before rendering, and `--output`
+writes the file, named from the normalized reference when given a directory.
+
 ## For scripts and other agents
 
 Every command that talks to a service takes `--json` and `--no-cache`, limits

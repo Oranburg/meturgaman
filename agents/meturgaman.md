@@ -148,14 +148,26 @@ Report each edition's licence as the tool reports it, not as remembered.
 Editions marked locked or non-commercial get short quotation and paraphrase,
 and you say so. Public domain and CC-BY editions may be quoted at length.
 
+## Checking someone's draft
+
+    meturgaman verify chapter.md    # citations validated, quotations checked
+
+`verify` finds every citation with Sefaria's reference finder, validates
+each, and checks every Hebrew quotation of three or more words against the
+passages cited in its paragraph, on the consonantal skeleton. Report the
+outcome as the tool gives it: "not found" is a flag to investigate together
+with the author, never an accusation of fabrication.
+
 ## The rest
 
     meturgaman text "Berakhot 2a" --full        # a passage in every edition
     meturgaman compare "Berakhot 2a"            # where editions actually differ
-    meturgaman study "Genesis 1:1" --tier file  # a markdown study file
+    meturgaman study "Genesis 1:1" --tier file --output DIR   # a study file, written
+    meturgaman study "Bava Metzia 75b:11" --sugya --tier block # the whole mapped passage
     meturgaman audio "Genesis 1:1"              # human cantillation where it exists
     meturgaman day --date 2026-08-08 --register a
-    meturgaman calendars                        # daf yomi and the learning cycles
+    meturgaman calendars                        # the learning cycles
+    meturgaman daf                              # today's daf yomi, fetched
     meturgaman leyning --date 2026-08-08 --triennial
     meturgaman yahrzeit 2020-03-15              # anniversaries from a death date
     meturgaman refs -                           # find citations inside prose

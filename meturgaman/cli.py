@@ -252,14 +252,36 @@ def _study(arguments) -> int:
     from meturgaman.emit import markdown
     from meturgaman.sources import sefaria
 
-    reading = sefaria.read(arguments.citation, version=("source", "translation"))
+    citation = arguments.citation
+    if arguments.sugya:
+        boundary = sefaria.passage_boundary(citation)
+        if boundary:
+            print(f"expanded to the mapped passage: {boundary}", file=sys.stderr)
+            citation = boundary
+        else:
+            print(
+                f"no passage mapping for {citation}; using it as given",
+                file=sys.stderr,
+            )
+
+    reading = sefaria.read(citation, version=("source", "translation"))
     rendered = {
         "block": markdown.block,
         "teaching": markdown.teaching,
         "interlinear": markdown.interlinear,
         "file": markdown.study_file,
     }[arguments.tier](reading, scheme=arguments.scheme)
-    print(rendered.text)
+
+    if arguments.output:
+        target = Path(arguments.output)
+        if target.is_dir():
+            # A directory means "name it for me": the stable name derived
+            # from the normalized reference, so one passage means one file.
+            target = target / markdown.filename_for(reading)
+        written = markdown.write(rendered, target)
+        print(f"wrote {written}")
+    else:
+        print(rendered.text)
     for observation in reading.observations:
         for warning in observation.warnings:
             print(f"  {observation.edition.title}: {warning}", file=sys.stderr)
@@ -267,6 +289,37 @@ def _study(arguments) -> int:
         print(file=sys.stderr)
         _print_flags(dict.fromkeys(rendered.flags))
     return 0
+
+
+def _daf(arguments) -> int:
+    from meturgaman.sources import sefaria
+
+    payload = sefaria.calendars(
+        date=arguments.date or "", diaspora=not arguments.israel
+    )
+    wanted = arguments.cycle.lower()
+    for item in payload.get("calendar_items") or []:
+        title = item.get("title") or {}
+        name = str(title.get("en") if isinstance(title, dict) else title)
+        if name.lower() != wanted:
+            continue
+        ref = str(item.get("ref") or "")
+        if not ref:
+            print(f"{name} names no fetchable ref today", file=sys.stderr)
+            return 1
+        arguments.citation = ref
+        print(f"{name}: {ref}", file=sys.stderr)
+        return _text(arguments)
+    names = [
+        str((item.get("title") or {}).get("en", ""))
+        for item in payload.get("calendar_items") or []
+    ]
+    print(
+        f"no learning cycle named {arguments.cycle!r} today. "
+        f"Cycles: {', '.join(name for name in names if name)}",
+        file=sys.stderr,
+    )
+    return 1
 
 
 # ---------------------------------------------------------------------------
@@ -466,6 +519,25 @@ def _sugya(arguments) -> int:
         return _emit_json({"ref": arguments.ref, "passage": found})
     print(found if found else f"no passage mapping for {arguments.ref}")
     return 0
+
+
+def _verify(arguments) -> int:
+    from meturgaman.verify import verify
+
+    if arguments.path == "-":
+        text = sys.stdin.read()
+    else:
+        text = Path(arguments.path).read_text(encoding="utf-8")
+    report = verify(text)
+    if arguments.json:
+        _emit_json({
+            "clean": report.clean,
+            "citations": report.citations,
+            "quotations": report.quotations,
+        })
+    else:
+        print(report.render())
+    return 0 if report.clean else 1
 
 
 def _refs(arguments) -> int:
@@ -771,7 +843,28 @@ def build_parser() -> argparse.ArgumentParser:
     study.add_argument("--tier", default="teaching", choices=("block", "teaching", "interlinear", "file"))
     study.add_argument("--scheme", default=None, help=scheme_help)
     study.add_argument("--quiet", action="store_true")
+    study.add_argument("--sugya", action="store_true",
+                       help="expand a Talmud reference to its mapped passage first")
+    study.add_argument("--output", default=None,
+                       help="write to this file, or into this directory "
+                            "under a name derived from the reference")
     study.set_defaults(handler=_study)
+
+    daf = commands.add_parser(
+        "daf", parents=[machine],
+        help="fetch today's daf yomi, or any other learning cycle's reading",
+    )
+    daf.add_argument("--cycle", default="Daf Yomi",
+                     help="a cycle name from `meturgaman calendars`")
+    daf.add_argument("--date", default=None, help="YYYY-MM-DD, default today")
+    daf.add_argument("--israel", action="store_true")
+    daf.add_argument("--version", action="append", dest="version",
+                     help="as for `meturgaman text`")
+    daf.add_argument("--format", default="text_only", choices=RETURN_FORMATS)
+    daf.add_argument("--full", action="store_true", help="every segment, not a preview")
+    daf.add_argument("--fill-gaps", action="store_true")
+    daf.add_argument("--max-editions", type=int, default=12)
+    daf.set_defaults(handler=_daf)
 
     romanize = commands.add_parser("romanize", parents=[machine],
                                    help="Hebrew to Latin under a scheme")
@@ -843,6 +936,13 @@ def build_parser() -> argparse.ArgumentParser:
                                help="find citations inside prose")
     refs.add_argument("text", help="prose, or - for standard input")
     refs.set_defaults(handler=_refs)
+
+    verify = commands.add_parser(
+        "verify", parents=[machine],
+        help="check a draft's citations and Hebrew quotations against editions",
+    )
+    verify.add_argument("path", help="a file, or - for standard input")
+    verify.set_defaults(handler=_verify)
 
     day = commands.add_parser("day", parents=[machine],
                               help="the Jewish calendar for a date")

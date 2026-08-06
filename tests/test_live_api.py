@@ -179,6 +179,27 @@ def test_text_only_leaves_no_markup_behind():
         )
 
 
+def test_verify_confirms_a_true_quotation_and_flags_a_corrupted_one():
+    """The draft checker against live text: the true survives, the false fails."""
+    from meturgaman.verify import verify
+
+    draft = (
+        "As Genesis 1:1 states: בראשית ברא אלהים את השמים ואת הארץ, "
+        "so the Torah opens.\n\n"
+        "A corrupted quotation, citing Genesis 1:2: "
+        "בראשית ברא משה את הארץ ואת המים, which no edition prints."
+    )
+    try:
+        report = verify(draft)
+    except Exception as error:
+        _skip_on_network_trouble(error)
+    assert not report.clean
+    outcomes = {q.quotation.split()[2]: q.found for q in report.quotations}
+    assert outcomes["אלהים"] is True
+    assert outcomes["משה"] is False
+    assert all(entry.resolved for entry in report.citations)
+
+
 def test_topic_sources_answer_the_question_they_are_for():
     """"What does the tradition say about X" has to return citations."""
     from meturgaman.sources import sefaria

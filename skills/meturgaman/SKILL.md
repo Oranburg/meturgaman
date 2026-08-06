@@ -169,10 +169,21 @@ Comparison runs on the consonantal skeleton. Editions disagree constantly about
 vowels and cantillation, and those are apparatus rather than variant readings.
 Report the substantive differences and leave the rest alone.
 
+## Checking a draft
+
+    meturgaman verify chapter.md
+
+Finds every citation with Sefaria's reference finder, validates each, and
+checks every Hebrew quotation of three or more words against the passages
+cited in its paragraph, on the consonantal skeleton. "Not found" is a flag
+to investigate, never proof of fabrication: the quoted edition may differ,
+or the citation may sit in a different paragraph than the quotation.
+
 ## Calendar and daily learning
 
     meturgaman day --date 2026-08-08 --register a
-    meturgaman calendars                    # daf yomi and the learning cycles
+    meturgaman calendars                    # the learning cycles
+    meturgaman daf                          # today's daf yomi, fetched
     meturgaman leyning --date 2026-08-08 --triennial
     meturgaman yahrzeit 2020-03-15          # anniversaries from a death date
     meturgaman zmanim --zip 20902 --elevation 150
