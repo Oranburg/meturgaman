@@ -45,7 +45,14 @@ meturgaman sources tzedakah --text
 meturgaman text "Berakhot 2a"
 meturgaman chain "Mishnah Bava Metzia 5:11"
 meturgaman romanize "כָּל־הָאָרֶץ"
+meturgaman verify chapter.md
+meturgaman daf
 ```
+
+`verify` checks a manuscript: every citation validated against Sefaria,
+every Hebrew quotation checked against the passages cited in its
+paragraph, on the consonantal skeleton. `daf` fetches today's daf yomi,
+or any other learning cycle's reading with `--cycle`.
 
 Every command that talks to a service takes `--json` for structured output
 and `--no-cache` to force a fresh fetch.
