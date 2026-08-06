@@ -36,9 +36,11 @@ __all__ = [
     "BASE", "ATTRIBUTION",
     "Ref", "Edition", "Segment", "Observation", "Reading",
     "Topic", "SearchHit", "LexiconEntry",
-    "resolve", "read", "editions", "related", "media", "passage_boundary",
+    "resolve", "read", "editions", "related", "media", "links",
+    "passage_boundary",
     "calendars", "name_candidates", "find_refs", "lookup_word",
-    "topics", "topic", "topic_sources", "search", "shape", "index_metadata",
+    "topics", "topic", "topic_sources", "search", "search_topics",
+    "shape", "index_metadata",
     "VERSION_KEYWORDS", "RETURN_FORMATS",
 ]
 
