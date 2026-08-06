@@ -1,57 +1,91 @@
 ---
 name: meturgaman
-description: Fetch Hebrew, Aramaic and Yiddish primary sources from Sefaria with their editions and licences, romanize them under any of eight published standards, tell which standard a text already uses, find what the tradition says about a subject, and hear a passage read aloud. Use whenever Jewish primary sources need retrieving, quoting, transliterating, or checking, or when someone asks what Jewish texts say about a topic.
+description: Answer questions about Jewish law, thought and practice from fetched primary sources. Locate where the tradition works a question, fetch Hebrew, Aramaic and Yiddish texts from Sefaria with their editions and licences, walk sugyot and commentary chains, explain terms, romanize under any of eight published standards, tell which standard a text already uses, and hear a passage read aloud. Use whenever someone asks what Jewish texts say about a topic, wants a passage or dispute explained, or needs Jewish primary sources retrieved, quoted, transliterated or checked.
 license: MIT
 compatibility: Needs the `meturgaman` command line tool, installed from https://github.com/Oranburg/meturgaman. Everything else is standard library and keyless HTTPS.
 allowed-tools: Bash, Read, Write, Edit, WebFetch
 metadata:
-  version: 0.1.0
+  version: 0.2.0
   repository: https://github.com/Oranburg/meturgaman
 ---
 
 # Meturgaman
 
 A *meturgaman* is the person who stood beside the reader and rendered the text
-for the congregation. This does that job: it fetches the source, says which
-edition it came from, and renders it into Latin letters under a standard that
-is named rather than assumed.
+for the congregation. The job is teaching, and the method is fetching: find
+where the tradition works the question, fetch the sources with their editions,
+and explain what they say, how the argument is built, and who disagrees.
+
+Every subcommand that talks to a service takes `--json` for structured output
+and `--no-cache` to force a fresh fetch.
 
 ## The rule that governs everything else
 
 **Never supply a Hebrew text from memory.** Fetch it. A remembered verse is
 plausible and sometimes wrong, and the wrongness is invisible to a reader who
 does not already know the text. Every passage this produces has a citation, an
-edition, and a licence attached, because a Hebrew quotation with no edition
-behind it is not a citation.
+edition, and a licence attached.
 
 The same applies to vowels. Unpointed text stays unpointed unless an edition
 that carries points is fetched, or `meturgaman vocalize` is run and the result
 marked as a model's reading rather than an edition's.
 
-## Getting started
+Four disciplines that exist because answers without them failed audits:
 
-    meturgaman schemes                 # the eight standards, each with its source
-    meturgaman text "Berakhot 2a"      # a passage, in every edition that has it
+- **No census without an enumeration.** Do not say a work does something "in
+  nine places" unless you fetched the work and counted the places.
+- **No dressing your reading in the tool's authority.** Report what a command
+  returned; argue your interpretation as your interpretation.
+- **Copy references exactly as fetched.** Sefaria's segmentation is what the
+  reader will look up; do not renumber from a remembered edition.
+- **A search snippet is a lead, not a source.** Fetch before quoting; the
+  index can hold text the live edition no longer contains.
 
-## What the tradition says about a subject
+Structure, framing and comparison are the job, not a violation of it. A good
+teacher neither fabricates a verse nor answers a question with a bibliography.
 
-This is the most common question and it has a two-step answer. Sefaria has a
-curated topic ontology, which is far better than full-text search for anything
-anyone has thought about before.
+## Answering a question about a subject
 
-    meturgaman topics charity          # find the slug: `tzedakah`, not `charity`
-    meturgaman sources tzedakah --text # the curated passages, with their text
+1. Topics beat search for anything anyone has thought about before:
 
-Fall back to search only when no topic fits:
+       meturgaman topics charity          # find the slug: `tzedakah`, not `charity`
+       meturgaman sources tzedakah --text # the curated passages, with their text
+       meturgaman search "ribbit" --filter Halakhah   # only when no topic fits
 
-    meturgaman search "ribbit" --filter Halakhah
+2. Fetch each source properly, so it arrives with its edition:
 
-Then fetch each source properly, so it arrives with its edition:
+       meturgaman text "Bava Metzia 75a:3-75b:12" --full
 
-    meturgaman text "Bava Metzia 75a:3-75b:12"
+3. Walk the transmission. The link graph knows what was built on a passage:
 
-Report what the sources say. Where they disagree, say they disagree rather than
-harmonizing them. Where you found nothing, say you found nothing.
+       meturgaman chain "Mishnah Bava Metzia 5:11"   # the whole shelf, in order
+       meturgaman links "Bava Metzia 75b:2" --category Commentary
+       meturgaman related "Bava Metzia 75b"          # counts, topics, sheets
+
+   A halakhic question runs Torah, Mishnah, Gemara, Rishonim, the codes, then
+   responsa; reading the chain down shows where a Gemara's law lands, reading
+   it up shows where a code's ruling began. A conceptual question surfaces
+   midrash, Jewish thought and Chasidut through the same commands.
+
+4. Name the disagreement. Say who holds what, on what grounds, and what turns
+   on it. Where the sources disagree, report the disagreement rather than
+   harmonizing. Where you found nothing, say you found nothing.
+
+## Walking a sugya
+
+    meturgaman sugya "Bava Metzia 75b:2"    # the mapped passage boundary
+
+A page is a physical unit, not an argument, and the boundary often crosses the
+page. Fetch the whole boundary, then teach the structure: question, proof,
+refutation, resolution, and the shift from law to aggadah where it happens.
+Cite segment anchors so the reader can follow.
+
+## Words and terms
+
+    meturgaman word אסמכתא                  # dictionary entries, with citations
+
+For a term of art, give the senses, show a fetched example of each, and tell
+the reader how to recognize which sense is in front of them.
 
 ## Romanizing
 
@@ -74,9 +108,9 @@ exist because different venues want different things:
 
 ## Read the flags. They are the point.
 
-The engine prints its output to stdout and its uncertainties to stderr. **A flag
-is not a warning to dismiss.** It is the tool saying it made a decision that
-orthography alone does not settle.
+The engine prints its output to stdout and its uncertainties to stderr. **A
+flag is not a warning to dismiss.** It is the tool saying it made a decision
+that orthography alone does not settle.
 
     qamats-qatan-assumed    read short; a meteg would have made it long
     sheva-undecided         cannot tell whether this sheva is pronounced
@@ -88,12 +122,10 @@ orthography alone does not settle.
 
 When a flag fires, say so in the output. "This is `ḥokhmah`, though the edition
 carries no meteg, so a reading of `ḥakhmah` is not excluded" is a useful
-sentence. Silently printing `ḥokhmah` is not.
+sentence. Silently printing `ḥokhmah` is not. With `--json`, flags travel
+inside the document, so a pipeline consumer sees them too.
 
 ## Romanization as evidence about a text
-
-A transliteration says something about who wrote it and where it was going.
-Reading that is a real capability, not a party trick.
 
     meturgaman detect "Shabbos and halachah"     # which standard
     meturgaman register "Shabbos and halachah"   # which community
@@ -134,13 +166,17 @@ Comparison runs on the consonantal skeleton. Editions disagree constantly about
 vowels and cantillation, and those are apparatus rather than variant readings.
 Report the substantive differences and leave the rest alone.
 
-## Calendar
+## Calendar and daily learning
 
     meturgaman day --date 2026-08-08 --register a
+    meturgaman calendars                    # daf yomi and the learning cycles
     meturgaman leyning --date 2026-08-08 --triennial
+    meturgaman yahrzeit 2020-03-15          # anniversaries from a death date
+    meturgaman zmanim --zip 20902 --elevation 150
 
 `--register a` gives Ashkenazi forms of the holiday names, so a writer working
-in Ashkenazi register can keep the calendar in register too.
+in Ashkenazi register can keep the calendar in register too. Every ref the
+learning calendar names can be fetched with `meturgaman text`.
 
 ## Refusing well
 
