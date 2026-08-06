@@ -20,10 +20,13 @@ shuruq: u
 
 # BGN/PCGN
 
-The official Israeli and United Nations system, and the source of the
-determination rules the other schemes rely on. Every row of its table prints an
+Adopted jointly by the BGN and the PCGN in 2018, and based on the Academy of
+the Hebrew Language's 2006 and 2011 transliteration systems, which is all the
+source says about its own standing. It is also the source of the determination
+rules the other schemes rely on. Every row of its consonant tables prints an
 explicit Unicode value, which removes all ambiguity about which character is
-meant.
+meant there; the fifteen-row vowel table prints no Unicode column, so its signs
+rest on the visual channel described below.
 
 ## Consonants
 
@@ -55,6 +58,15 @@ meant.
 | שׁ | shin | sh |
 | שׂ | sin | s |
 | ת תּ | tav | t |
+| ג׳ | gimel geresh | ǧ |
+| ז׳ | zayin geresh | ž |
+| צ׳ | tsadi geresh | č |
+
+The three geresh rows are the source's rows 27 to 29, printed on page 3 as a
+small second consonant table with its own Unicode column: 05D2+05F3/01E7,
+05D6+05F3/017E, 05E6+05F3/010D. The source's remark on them: they are used on
+Israeli maps to render Arabic and other non-Hebrew names, and names in which
+they occur should be romanized in accordance with its notes 7 and 8.
 
 **ח is `ẖ` U+1E96, h with a LINE below**, not the dot-below `ḥ` that SBL and
 ALA-LC use. The printed Unicode column says 1E96 and the glyph matches. The same
@@ -82,7 +94,11 @@ script, which is a different job.
 
 The vowel glyphs in this PDF are unreadable by extraction, every one decoding as
 patah because of a broken font encoding; these rows come from the visual channel.
-The romanization column extracts cleanly and agrees with it.
+The romanization column extracts cleanly and agrees with it, with one caution:
+the text layer carries `aa` on the patah rows and `uu` on the qubuts rows, and
+the rendered page prints neither. Rows 1 and 2 share a single printed `a` and
+rows 14 and 15 share a single printed `u`; the doubled strings sit clipped
+outside the visible cells, text-layer artifacts rather than values.
 
 ## What the source prints, and what is chosen from it
 
@@ -90,7 +106,6 @@ The romanization column extracts cleanly and agrees with it.
 |---|---|---|---|
 | ◌ָ qamats | `a, o`, remarked "Usually a; very rarely o." | `a` for U+05B8, `o` for U+05C7 | The alternative is the gadol and qatan distinction, which Unicode gives separate codepoints. "Very rarely o" is the source's own statement that `a` is the mainline. |
 | ◌ְ shva | `e, or not romanized`, see note 3 | `e` when vocal, nothing when silent | Positional, and note 3 is about exactly that position. |
-| ◌ַ patah, ◌ֻ qubuts | `a` / `aa`, `u` / `uu` | `a`, `u` | The doubled forms are the gemination rule (note 2) shown on the vowel rows, not a second value for the vowel. |
 
 ## Rules
 

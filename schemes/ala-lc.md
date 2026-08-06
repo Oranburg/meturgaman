@@ -36,28 +36,36 @@ Sephardic, pronunciation."
 | ד | dalet | d |
 | ה | he | h |
 | ו | vav | ṿ |
+| װ | double vav | ṿ |
 | ז | zayin | z |
 | ח | ḥet | ḥ |
 | ט | tet | ṭ |
 | י | yod | y |
-| כּ | kaf | k |
+| כּ ךּ | kaf | k |
 | כ ך | khaf | kh |
 | ל | lamed | l |
 | מ ם | mem | m |
 | נ ן | nun | n |
 | ס | samekh | s |
 | ע | ayin | ʻ |
-| פּ | pe | p |
+| פּ ףּ | pe | p |
 | פ ף | fe | f |
 | צ ץ | tsadi | ts |
 | ק | qof | ḳ |
 | ר | resh | r |
 | שׁ | shin | sh |
 | שׂ | sin | ś |
-| ת | tav | t |
+| ת תּ | tav | t |
 
-ו, י and א are romanized **only when consonantal**; as matres they are carried by
-the vowel. Alef is `ʼ (alif) or disregarded`; this scheme writes it.
+ו and י are romanized **only when consonantal**; as matres they are carried by
+the vowel. The source prints that condition itself, on the ו, װ and י rows.
+The alef row instead prints an option, `ʼ (alif) or disregarded`, with no
+positional condition attached; this scheme writes it.
+
+The final forms ךּ and ףּ are the source's own, printed in parentheses on the
+kaf and pe rows the way it prints every other final form. תּ has a row of its
+own beside ת, both reading `t` in the Hebrew column, and װ has one too,
+reading `ṿ (only if a consonant)` exactly as the ו row does.
 
 ## Vowels
 
@@ -98,7 +106,7 @@ resolved by the criterion the source has in mind.
 
 - **Nothing doubles.** The Hebraica Cataloging Manual does not distinguish dagesh
   ḥazaḳ from dagesh ḳal, so gemination is not marked at all.
-- **The single prime.** "A single prime ( ′ ) is placed between two letters
+- **The single prime.** "A single prime ( ʹ ) is placed between two letters
   representing two distinct consonantal sounds when the combination might
   otherwise be read as a digraph": `hisʹhid` for הסהיד.
 - **Supplying vowels is expected.** "In romanizing Hebrew, it is often necessary

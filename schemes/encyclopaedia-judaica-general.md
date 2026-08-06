@@ -108,6 +108,23 @@ counted fourteen vowel rows and identified each point; the programmatic read
 returned the same fourteen in the same order, with the General column blank on
 exactly the rows the visual read shows blank.
 
+The sheva row sits outside those spans, and its `e` is chosen rather than
+printed. Its General cell contains only "only *sheva na* is transliterated",
+which says when the sign is written and never says what it is written as, and
+the `e` above it belongs to the segol span. The Scientific column beside it
+prints `ə, ě, e` for the same sign, so `e` is the one value the page itself
+offers that the General column's plain alphabet can carry, and it is what
+`shva_na` in the front matter and the sheva row of the vowel table record.
+
+The consonant grid leans on blanks the same way, three times. ג, ד and ת each
+print two rows, the dotted form and the spirant; the General column prints its
+value on the dotted row and leaves the spirant row blank, while the Scientific
+column fills both, `g` against `ḡ` and so on. Read by the letter of
+`schemes/README.md`, an empty cell means the letter is not written, which is
+what the alef and ayin cells mean; here the blank is read as a span instead,
+the printed value covering both forms, and that reading is what the merged
+ג גּ, ד דּ and ת תּ rows of the consonant table above carry.
+
 ## What the source does not print
 
 **There is no hataf qamats row, and no qamats qatan row.** Fourteen vowel rows

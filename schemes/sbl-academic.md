@@ -84,6 +84,12 @@ Vocal shewa is **`ǝ` U+01DD LATIN SMALL LETTER TURNED E**, not U+0259 SCHWA. Th
 two are the same shape in an italic serif; the visual channel said so and
 deferred, and the machine channel read the codepoint from the file.
 
+## What the source prints, and what is chosen from it
+
+| Sign | Source prints | Chosen | Why |
+|---|---|---|---|
+| ◌ָ qamats | two rows, `ā` at qamets and `o` at qamets khatuf, both signs encoded U+05B8 | `ā` for U+05B8, `o` for U+05C7 | The source separates the rows by name rather than by codepoint; its own table encodes both signs as U+05B8. Unicode gives the qatan sign U+05C7, so this file keys the `o` row there, the way ALA-LC and BGN/PCGN split the same alternative, and `romanize.rules` decides by position for the U+05B8 that almost all real text uses. |
+
 ## Rules
 
 - **Note 2: always transliterate quiescent aleph.** `lōʾ`, `hûʾ`, `rōʾš`, Aramaic `malkāʾ`.

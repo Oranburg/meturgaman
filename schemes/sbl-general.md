@@ -84,9 +84,11 @@ recorded so it is a decision rather than an accident.
 |---|---|---|---|
 | א | `’ or omit` | `’` | Written, not omitted. |
 | ע | `‘ or omit` | `‘` | Written, not omitted. |
+| ו | `v or w` | `v` | The style is a pronunciation aid, and modern Hebrew says v. `w` stays the academic style's letter, so the two SBL styles remain tellable apart at this row. |
 | ח | `kh or h` | **`ḥ`** | **Deviation.** Both source options collapse ח into כ. `ḥ` is what SBL academic, ALA-LC, and both Encyclopaedia Judaica columns use. |
 | ב ג ד כ פ ת | `b, v` · `g, gh` · `d, dh` · `k, kh` · `p, ph or f` · `t, th` | b/v, k/kh, p/f only | Note 3: in modern Hebrew the dagesh lene "generally affects the pronunciation of only bet, kaf, and pe." |
 | tsere yod | `e` | **`ei`** | **Deviation**, following Encyclopaedia Judaica. |
+| ◌ָ qamats | two rows, `a` at qamets and `o` at qamets khatuf, both signs encoded U+05B8 | `a` for U+05B8, `o` for U+05C7 | The source separates the rows by name rather than by codepoint; its own table encodes both signs as U+05B8. Unicode gives the qatan sign U+05C7, so this file keys the `o` row there, the way ALA-LC and BGN/PCGN split the same alternative, and `romanize.rules` decides by position for the U+05B8 that almost all real text uses. |
 | שׂ | `s` | `s` | |
 
 Two further deviations, both departures from the source rather than choices

@@ -113,12 +113,18 @@ interpretive.
 `אַ` pasekh alef and `אָ` komets alef are letters carrying a vowel point, and both
 sit on the same letter. A consonant table keyed by letter would have `א` meaning
 three different things at once, so those two rows moved to their own table where
-the key is the whole sequence. Nothing else moved, and no value changed.
+the key is the whole sequence. They are the only rows that moved, and no value
+anywhere changed from what the source prints.
 
-The ligature spellings `װ`, `ױ` and `ײ` are added alongside the two-letter
-spellings the source prints. They are the same sequences encoded as single
-codepoints, real text uses both, and a file gives no clue which its author chose.
-This is an addition to the source's coverage rather than a change to its values.
+Four spellings in the combinations table are additions the source does not
+print, and every one is the other encoding of a sequence the source does print.
+The ligatures `װ`, `ױ` and `ײ` are added alongside the two-letter spellings
+`וו`, `וי` and `יי`. For the pasekh diphthong the source itself prints the
+ligature, `ײַ` U+05F2 with U+05B7, so there the addition runs the other way:
+the spelled-out `ייַ` is added alongside it. Each pair is one sequence in two
+encodings, real text uses both, and a file gives no clue which its author
+chose, so these are additions to the source's coverage rather than changes to
+its values.
 
 ## What this scheme does not carry
 

@@ -115,7 +115,7 @@ reader cannot tell which a file used.
 |---|---|---|---|
 | א | `a or o` | `a` for אַ, `o` for אָ | The alternative is the pasekh and komets distinction, and the point is on the page. A bare `א` with no point is the shtumer alef and is silent. |
 | ײ | `ay (if pronounced ai as in aisle), or ey (if pronounced ei as in weigh)` | `ay` for אײַ, `ey` for אײ | The two rows are printed with and without a pasekh under the double yod. Confirmed at 600 dpi: the ay row carries the stroke, the ey row does not. |
-| ת | `t (in Yiddish, ṡ)` | `s̀` | See below. This one nearly went in wrong. |
+| ת | `t (in Yiddish, s̀)` | `s̀` | See below. This one nearly went in wrong. |
 
 ## The one that nearly went in wrong
 
