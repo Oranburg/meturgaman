@@ -167,6 +167,11 @@ with the author, never an accusation of fabrication.
     meturgaman compare "Berakhot 2a"            # where editions actually differ
     meturgaman study "Genesis 1:1" --tier file --output DIR   # a study file, written
     meturgaman study "Bava Metzia 75b:11" --sugya --tier block # the whole mapped passage
+    meturgaman study "Mishneh Torah, Foundations of the Torah 2:2" --paired
+                                                # companions from rules/pairings.md
+    meturgaman study "..." --vocalize           # point unpointed text, marked as
+                                                # a model's reading (dicta extra)
+    meturgaman anchors "Work Title"             # every populated anchor, counted
     meturgaman audio "Genesis 1:1"              # human cantillation where it exists
     meturgaman day --date 2026-08-08 --register a
     meturgaman calendars                        # the learning cycles

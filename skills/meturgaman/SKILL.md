@@ -171,6 +171,18 @@ Comparison runs on the consonantal skeleton. Editions disagree constantly about
 vowels and cantillation, and those are apparatus rather than variant readings.
 Report the substantive differences and leave the rest alone.
 
+## Study files
+
+    meturgaman study "Genesis 1:1" --tier file --output DIR
+    meturgaman study "Bava Metzia 75b:11" --sugya      # expand to the mapped passage
+    meturgaman study "Mishneh Torah, Foundations of the Torah 2:2" --paired
+    meturgaman study "..." --vocalize                  # needs the dicta extra
+
+`--paired` appends companion passages: `rules/pairings.md` names the pairs
+and the link graph supplies the passage-level connections, with absence
+reported as absence. `--vocalize` points unpointed Hebrew locally and stamps
+the output as a model's reading rather than an edition's.
+
 ## Checking a draft
 
     meturgaman verify chapter.md

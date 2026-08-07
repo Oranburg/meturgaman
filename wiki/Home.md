@@ -47,12 +47,20 @@ meturgaman chain "Mishnah Bava Metzia 5:11"
 meturgaman romanize "כָּל־הָאָרֶץ"
 meturgaman verify chapter.md
 meturgaman daf
+meturgaman anchors "Work Title"
 ```
 
 `verify` checks a manuscript: every citation validated against Sefaria,
 every Hebrew quotation checked against the passages cited in its
 paragraph, on the consonantal skeleton. `daf` fetches today's daf yomi,
-or any other learning cycle's reading with `--cycle`.
+or any other learning cycle's reading with `--cycle`. `anchors` prints
+every populated anchor of a work with its segment count, so a census
+is counted rather than remembered. Study files can carry companions
+(`study --paired`, from `rules/pairings.md` and the link graph) and
+model-pointed vowels marked as such (`study --vocalize`, dicta extra).
+An optional MCP server (`pip install 'meturgaman[mcp]'`, then
+`meturgaman-mcp`) serves thirteen tools to Claude Desktop and Claude
+Code over stdio.
 
 Every command that talks to a service takes `--json` for structured output
 and `--no-cache` to force a fresh fetch.

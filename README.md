@@ -204,8 +204,32 @@ finder, validates each one, and checks every Hebrew quotation of three words
 or more against the fetched text of the passages cited in its paragraph.
 Matching runs on the consonantal skeleton, so pointing and cantillation
 differences do not defeat a genuine quotation while a reworded one still
-fails. Exit code 0 means everything resolved and every quotation was found;
-"not found" is a flag to check, never proof of fabrication.
+fails. A miss arrives as a diagnosis: the closest passage, the run of words
+that does match, and the first word where the draft parts from the edition:
+
+```
+            matches Genesis 1:1 through 'בראשית ברא', then the draft has
+            'משה' where the edition has 'אֱלֹהִ֑ים'
+```
+
+Exit code 0 means everything resolved and every quotation was found; "not
+found" is a flag to check, never proof of fabrication.
+
+## Counting from data
+
+```
+$ meturgaman anchors "Hasagot HaRaavad on Mishneh Torah, Repentance"
+Hasagot HaRa'avad on Mishneh Torah, Repentance
+    10 chapters, 12 populated anchors, 13 segments
+    2:5          1 segment
+    3:7          2 segments
+    ...
+```
+
+A sentence like "Ravad glosses this book in nine places" is a census, and a
+census written from memory is how careful answers go wrong. `anchors` prints
+every populated anchor of a work with its segment count, straight from the
+service's shape record, so counting means reading rather than remembering.
 
 ## Daily learning
 
@@ -220,6 +244,19 @@ meturgaman study "Genesis 1" --tier file --output ~/notes/
 a Talmud reference to its mapped passage before rendering, and `--output`
 writes the file, named from the normalized reference when given a directory.
 
+Two further study options:
+
+- `--paired` appends companion passages: `rules/pairings.md` names the pairs
+  (Mishneh Torah with the Guide, Shulchan Arukh and the Tur with the Beit
+  Yosef, each with its reason), and the passage-level connections come from
+  Sefaria's link graph at run time. Where the graph records no companion
+  passage, the file says so instead of guessing; the graph is genuinely
+  sparse there.
+- `--vocalize` points unvocalized Hebrew with Dicta's model, run locally
+  (`pip install 'meturgaman[dicta]'`), and stamps the output as a model's
+  reading rather than an edition's. Editions that carry their own pointing
+  are left alone.
+
 ## For scripts and other agents
 
 Every command that talks to a service takes `--json` and `--no-cache`, limits
@@ -233,6 +270,17 @@ around.
 meturgaman text "Genesis 1:1" --json | jq '.editions[0].segments[0].text'
 meturgaman links "Bava Metzia 75b:2" --refs-only | while read ref; do ...
 ```
+
+For MCP clients such as Claude Desktop and Claude Code, an optional server
+wraps the same library:
+
+```
+pip install 'meturgaman[mcp]'
+meturgaman-mcp
+```
+
+Thirteen tools over stdio, structured results, flags inside the payload. The
+SDK stays behind the extra so the core keeps its zero dependencies.
 
 ## Hearing it, and the calendar
 
@@ -299,8 +347,7 @@ table of correspondences between two writing systems is a set of facts.
 
 ## Not yet
 
-An MCP server of its own, the tanach.us reader, translation beyond retrieval
-of published translations, and a web interface. Sefaria runs hosted MCP
-servers at `https://mcp.sefaria.org/sse` and
-`https://developers.sefaria.org/mcp` if that is what you want today; they
+The tanach.us reader, translation beyond retrieval of published
+translations, and a web interface. Sefaria also runs hosted MCP servers at
+`https://mcp.sefaria.org/sse` and `https://developers.sefaria.org/mcp`; they
 need a paid account, which is why this tool does not depend on them.
