@@ -200,3 +200,17 @@ Read the scheme file first. `schemes/` holds one markdown file per standard,
 each carrying its citation and a record of every place it departs from its
 source. The tables are documents on purpose, so checking one means reading a
 page rather than reading code.
+
+## The technical writing process has owners
+
+The `manuscript-engineer` agent owns the writing process in the technical
+sense: which pipeline a document belongs to (iA Writer manuscripts against
+the Astro/MDX web road, which never mix), its frontmatter and naming at
+birth, its citation and footnote apparatus, the verification passes it must
+survive, and the routing to the right exporter. The `ia-writer` agent owns
+iA Writer itself: the dialect, the Library, content blocks, the [#CiteKey]
+lifecycle, and the footnote uniqueness rule that breaks DOCX compiles
+silently. Follow their conventions when writing or editing any manuscript
+file; hand off to `manuscript-engineer` for setup, mechanics audits, and
+pipeline questions, and to `ia-writer` for iA Writer syntax and Library
+work, rather than guessing at either.
