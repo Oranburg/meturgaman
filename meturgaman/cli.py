@@ -272,6 +272,35 @@ def _study(arguments) -> int:
         "file": markdown.study_file,
     }[arguments.tier](reading, scheme=arguments.scheme)
 
+    if arguments.paired:
+        from meturgaman.pairings import companions_for, filter_companion_links
+
+        title = reading.ref.book or reading.ref.normalized
+        applicable = companions_for(title)
+        if applicable:
+            links = sefaria.links(reading.ref)
+            lines = ["", "## Companions", ""]
+            for pairing in applicable:
+                found = filter_companion_links(links, pairing.companion)
+                lines.append(f"**{pairing.companion}.** {pairing.why}")
+                lines.append("")
+                if found:
+                    lines.extend(f"- {ref}" for ref in found)
+                else:
+                    # Absence is a finding: the graph is sparse, and saying
+                    # so beats inventing a passage the graph never linked.
+                    lines.append(
+                        f"- The link graph records no {pairing.companion} "
+                        f"passage for {reading.ref.normalized}."
+                    )
+                lines.append("")
+            rendered.text = rendered.text + "\n" + "\n".join(lines).rstrip()
+        else:
+            print(
+                f"no companion work is declared for {title} in rules/pairings.md",
+                file=sys.stderr,
+            )
+
     if arguments.output:
         target = Path(arguments.output)
         if target.is_dir():
@@ -866,6 +895,9 @@ def build_parser() -> argparse.ArgumentParser:
     study.add_argument("--quiet", action="store_true")
     study.add_argument("--sugya", action="store_true",
                        help="expand a Talmud reference to its mapped passage first")
+    study.add_argument("--paired", action="store_true",
+                       help="append companion passages from rules/pairings.md "
+                            "and the link graph")
     study.add_argument("--output", default=None,
                        help="write to this file, or into this directory "
                             "under a name derived from the reference")
