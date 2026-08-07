@@ -265,12 +265,58 @@ def _study(arguments) -> int:
             )
 
     reading = sefaria.read(citation, version=("source", "translation"))
+
+    vocalized_count = 0
+    if arguments.vocalize:
+        from meturgaman import hebrew
+        from meturgaman.sources import dicta
+
+        if not dicta.is_available():
+            print(dicta.requirement_message(), file=sys.stderr)
+            return 3
+        for observation in reading.observations:
+            language = (
+                observation.edition.actual_language
+                or observation.edition.language
+                or ""
+            ).lower()
+            if not language.startswith("he"):
+                continue
+            segments = []
+            for segment in observation.segments:
+                if segment.text and not any(
+                    hebrew.is_vowel(ch) for ch in segment.text
+                ):
+                    segments.append(sefaria.Segment(
+                        anchor=segment.anchor,
+                        text=dicta.vocalize(segment.text).text,
+                    ))
+                    vocalized_count += 1
+                else:
+                    segments.append(segment)
+            observation.segments = segments
+
     rendered = {
         "block": markdown.block,
         "teaching": markdown.teaching,
         "interlinear": markdown.interlinear,
         "file": markdown.study_file,
     }[arguments.tier](reading, scheme=arguments.scheme)
+
+    if vocalized_count:
+        # The pointing in those segments is no longer the edition's, and a
+        # study file that did not say so would be attributing a model's
+        # reading to a printed source.
+        from meturgaman.sources.dicta import MODEL
+
+        note = (
+            f"[vocalized-by-model] {vocalized_count} segment(s) carried no "
+            f"vowels and were pointed by {MODEL}, run locally. The vowels "
+            f"are a model's reading, not an edition's; check before quoting "
+            f"as pointing."
+        )
+        rendered.text = rendered.text + f"\n\n{note}"
+        rendered.flags.append(note)
 
     if arguments.paired:
         from meturgaman.pairings import companions_for, filter_companion_links
@@ -898,6 +944,9 @@ def build_parser() -> argparse.ArgumentParser:
     study.add_argument("--paired", action="store_true",
                        help="append companion passages from rules/pairings.md "
                             "and the link graph")
+    study.add_argument("--vocalize", action="store_true",
+                       help="point unvocalized Hebrew with Dicta's local model, "
+                            "marked as a model's reading (needs the dicta extra)")
     study.add_argument("--output", default=None,
                        help="write to this file, or into this directory "
                             "under a name derived from the reference")
