@@ -26,6 +26,10 @@ dependencies = []
 # large and they run on the user's own machine, so they are opt-in. When they
 # are absent the tool says so plainly rather than quietly skipping the step.
 dicta = ["torch>=2.2", "transformers>=4.40"]
+# The Model Context Protocol server, for Claude Desktop and Claude Code.
+# Optional for the same reason dicta is: the core stays standard library,
+# and `meturgaman-mcp` says what to install when the SDK is absent.
+mcp = ["mcp>=2.0"]
 dev = ["pytest>=8"]
 
 [project.urls]
@@ -34,6 +38,7 @@ Issues = "https://github.com/Oranburg/meturgaman/issues"
 
 [project.scripts]
 meturgaman = "meturgaman.cli:main"
+meturgaman-mcp = "meturgaman.mcp_server:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
