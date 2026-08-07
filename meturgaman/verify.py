@@ -34,8 +34,8 @@ from dataclasses import dataclass, field
 from meturgaman import hebrew
 
 __all__ = [
-    "CitationCheck", "QuotationCheck", "Report",
-    "hebrew_runs", "skeleton_contains", "verify",
+    "CitationCheck", "Divergence", "QuotationCheck", "Report",
+    "diagnose", "hebrew_runs", "skeleton_contains", "verify",
 ]
 
 #: A quotation shorter than this many Hebrew words is not checked. Two-word
@@ -55,12 +55,43 @@ class CitationCheck:
 
 
 @dataclass(frozen=True)
+class Divergence:
+    """Where the closest passage stops matching a quotation.
+
+    A bare "not found" sends the writer hunting; this names the exact word
+    where the best candidate diverges, so the flag arrives as a diagnosis.
+    """
+
+    ref: str
+    #: The quotation's words that matched, as the draft prints them.
+    matched: str
+    #: The first draft word the passage does not have at that position.
+    draft_word: str
+    #: What the passage prints there instead, empty when it simply ends.
+    edition_word: str = ""
+
+    def describe(self) -> str:
+        if not self.matched:
+            return f"no run of words matches {self.ref}"
+        text = f"matches {self.ref} through {self.matched!r}"
+        if self.draft_word and self.edition_word:
+            text += (
+                f", then the draft has {self.draft_word!r} where the edition "
+                f"has {self.edition_word!r}"
+            )
+        elif self.draft_word:
+            text += f", then the draft continues {self.draft_word!r} past the passage's end"
+        return text
+
+
+@dataclass(frozen=True)
 class QuotationCheck:
     """One Hebrew quotation, and where it was or was not found."""
 
     quotation: str
     found_in: str = ""
     checked_against: tuple[str, ...] = ()
+    divergence: Divergence | None = None
 
     @property
     def found(self) -> bool:
@@ -97,6 +128,8 @@ class Report:
                     f"NOT FOUND   {head}...  checked against "
                     f"{', '.join(entry.checked_against)}"
                 )
+                if entry.divergence is not None:
+                    lines.append(f"            {entry.divergence.describe()}")
             else:
                 lines.append(
                     f"UNCHECKED   {head}...  no citation in its paragraph to check against"
@@ -149,6 +182,53 @@ def skeleton_contains(source: str, quotation: str) -> bool:
         if haystack[start:start + len(needle)] == needle:
             return True
     return False
+
+
+def _hebrew_words(text: str) -> list[tuple[str, str]]:
+    """Each Hebrew word of a text, as printed and as skeleton."""
+    pairs = [
+        (word, hebrew.consonantal_skeleton(word))
+        for word in text.split()
+        if hebrew.has_hebrew(word)
+    ]
+    return [(word, skeleton) for word, skeleton in pairs if skeleton]
+
+
+def diagnose(source: str, quotation: str, *, ref: str = "") -> Divergence:
+    """The longest run the source does match, and the first word it does not.
+
+    Tries every alignment of the quotation against the source and keeps the
+    one that matches the most leading words, so the report names the exact
+    point of divergence rather than only the fact of it.
+    """
+    needle = _hebrew_words(quotation)
+    haystack = _hebrew_words(source)
+    best_length = 0
+    best_start = 0
+    if needle and haystack:
+        for start in range(len(haystack)):
+            length = 0
+            while (
+                length < len(needle)
+                and start + length < len(haystack)
+                and haystack[start + length][1] == needle[length][1]
+            ):
+                length += 1
+            if length > best_length:
+                best_length = length
+                best_start = start
+
+    matched = " ".join(word for word, _ in needle[:best_length])
+    draft_word = needle[best_length][0] if best_length < len(needle) else ""
+    edition_position = best_start + best_length
+    edition_word = (
+        haystack[edition_position][0]
+        if best_length and edition_position < len(haystack)
+        else ""
+    )
+    return Divergence(
+        ref=ref, matched=matched, draft_word=draft_word, edition_word=edition_word
+    )
 
 
 def _paragraphs(text: str) -> list[str]:
@@ -228,11 +308,22 @@ def verify(text: str) -> Report:
                 if skeleton_contains(fetched[ref], quotation):
                     found_in = ref
                     break
+            divergence = None
+            if not found_in and nearby:
+                # Name the closest miss: the candidate whose text matches the
+                # longest run of the quotation's words.
+                candidates = [
+                    diagnose(fetched[ref], quotation, ref=ref) for ref in nearby
+                ]
+                divergence = max(
+                    candidates, key=lambda entry: len(entry.matched.split())
+                )
             report.quotations.append(
                 QuotationCheck(
                     quotation=quotation,
                     found_in=found_in,
                     checked_against=tuple(nearby),
+                    divergence=divergence,
                 )
             )
     return report

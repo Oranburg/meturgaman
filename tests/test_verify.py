@@ -8,8 +8,10 @@ from __future__ import annotations
 
 from meturgaman.verify import (
     CitationCheck,
+    Divergence,
     QuotationCheck,
     Report,
+    diagnose,
     hebrew_runs,
     skeleton_contains,
 )
@@ -50,6 +52,58 @@ def test_skeleton_contains_rejects_a_changed_word():
 def test_skeleton_contains_rejects_empty_and_oversized_needles():
     assert not skeleton_contains("בראשית ברא", "")
     assert not skeleton_contains("בראשית", "בראשית ברא אלהים")
+
+
+def test_diagnose_names_the_first_diverging_word():
+    source = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם"
+    found = diagnose(source, "בראשית ברא משה את השמים", ref="Genesis 1:1")
+    assert found.matched == "בראשית ברא"
+    assert found.draft_word == "משה"
+    # The edition's word arrives as the edition prints it, pointing and all.
+    assert found.edition_word == "אֱלֹהִים"
+    assert "then the draft has" in found.describe()
+
+
+def test_diagnose_picks_the_best_alignment_not_the_first():
+    # The quotation starts mid-verse; the match must anchor there, not at
+    # the verse's opening word.
+    source = "ויאמר אלהים יהי אור ויהי אור"
+    found = diagnose(source, "יהי אור ויהי חשך", ref="Genesis 1:3")
+    assert found.matched == "יהי אור ויהי"
+    assert found.draft_word == "חשך"
+    assert found.edition_word == "אור"
+
+
+def test_diagnose_says_when_nothing_matches():
+    found = diagnose("שמע ישראל", "ברוך אתה", ref="Deuteronomy 6:4")
+    assert found.matched == ""
+    assert "no run of words matches" in found.describe()
+
+
+def test_diagnose_reports_a_draft_running_past_the_passage_end():
+    found = diagnose("שמע ישראל", "שמע ישראל השם אלקינו", ref="Deuteronomy 6:4")
+    assert found.matched == "שמע ישראל"
+    assert found.draft_word == "השם"
+    assert found.edition_word == ""
+    assert "past the passage's end" in found.describe()
+
+
+def test_render_carries_the_divergence_line():
+    report = Report(
+        quotations=[
+            QuotationCheck(
+                quotation="א ב ג",
+                checked_against=("Genesis 1:1",),
+                divergence=Divergence(
+                    ref="Genesis 1:1", matched="א ב",
+                    draft_word="ג", edition_word="ד",
+                ),
+            )
+        ],
+    )
+    text = report.render()
+    assert "NOT FOUND" in text
+    assert "matches Genesis 1:1 through 'א ב'" in text
 
 
 def test_report_is_clean_only_when_everything_passed():
