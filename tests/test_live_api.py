@@ -23,6 +23,7 @@ written down, each of which cost time to find and none of which is documented:
 
 from __future__ import annotations
 
+import json
 import re
 
 import pytest
@@ -383,3 +384,94 @@ def test_find_refs_returns_the_citations_it_finds():
     refs = [ref for entry in found for ref in (entry.get("refs") or [])]
     assert "Genesis 1:1" in refs, refs
     assert "Berakhot 2a" in refs, refs
+
+
+def test_a_clipped_preview_says_so():
+    """A cut with no mark reads as the whole ruling; this project cannot allow that.
+
+    This segment's English runs well past 200 characters. The default
+    preview used to cut it silently; a reader trusting the default output
+    could quote a clipped sentence as a complete one.
+    """
+    import io
+    from contextlib import redirect_stdout
+
+    from meturgaman.cli import main
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = main(["text", "Bava Metzia 75b:11"])
+    assert code == 0
+    text = out.getvalue()
+    assert "… (--full for the rest)" in text, text
+
+
+def test_a_category_filter_with_nothing_in_it_names_the_category():
+    """"nothing links to REF" was false whenever a category filter, not the
+    ref itself, was the reason the list came back empty."""
+    import io
+    from contextlib import redirect_stderr
+
+    from meturgaman.cli import main
+
+    err = io.StringIO()
+    with redirect_stderr(err):
+        code = main(["links", "Genesis 28:12", "--category", "Grammar"])
+    assert code == 1
+    message = err.getvalue()
+    assert "Grammar" in message
+    assert message.strip() != "nothing links to Genesis 28:12"
+
+
+def test_sugya_does_not_echo_a_ref_back_as_its_own_boundary():
+    """Sefaria's `/passages/` no-op for a non-Talmud ref used to print as if
+    a real, if trivial, boundary had been confirmed."""
+    from meturgaman.sources import sefaria
+
+    siddur_ref = "Siddur Ashkenaz, Weekday, Shacharit, Amidah, Divine Might"
+    try:
+        found = sefaria.passage_boundary(siddur_ref)
+    except Exception as error:
+        _skip_on_network_trouble(error)
+    # The identity echo itself is still what the service returns; the fix
+    # lives in the CLI layer that decides what to do with it.
+    assert found == siddur_ref
+
+    from meturgaman.cli import main
+    import io
+    from contextlib import redirect_stdout
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = main(["sugya", siddur_ref, "--json"])
+    assert code == 0
+    payload = json.loads(out.getvalue())
+    assert payload["passage"] is None
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = main(["sugya", "Genesis 1:1", "--json"])
+    assert code == 0
+    payload = json.loads(out.getvalue())
+    assert payload["passage"] not in (None, "Genesis 1:1")
+
+
+def test_the_locked_warning_does_not_read_as_a_licence_warning():
+    """The lock is Sefaria's own edit freeze, unrelated to copyright; a
+    public-domain edition can carry it and still be freely quotable."""
+    from meturgaman.sources import sefaria
+
+    try:
+        reading = sefaria.read("Bava Metzia 75b", version="source")
+    except Exception as error:
+        _skip_on_network_trouble(error)
+    locked = [
+        warning
+        for observation in reading.observations
+        for warning in observation.warnings
+        if "froz" in warning.lower()
+    ]
+    assert locked, "no locked edition turned up to check the wording against"
+    for warning in locked:
+        assert "check the licence before quoting" not in warning
+        assert "licence" in warning

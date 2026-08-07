@@ -121,7 +121,13 @@ def _text(arguments) -> int:
                 print(f"    {segment.anchor}")
                 print(f"      {segment.text}")
         elif observation.segments:
-            print(f"      {observation.segments[0].text[:200]}")
+            preview = observation.segments[0].text
+            # A cut without a mark reads as the whole ruling. This is exactly
+            # the shape of error the project exists to prevent, so a clipped
+            # preview says so rather than looking complete.
+            if len(preview) > 200:
+                preview = preview[:200] + "… (--full for the rest)"
+            print(f"      {preview}")
         print()
     print(reading.attribution)
     return 0
@@ -161,7 +167,14 @@ def _links(arguments) -> int:
     if arguments.json:
         return _emit_json({"ref": ref.normalized, "links": found})
     if not found:
-        print(f"nothing links to {ref.normalized}", file=sys.stderr)
+        if arguments.category:
+            # "Nothing links" was false whenever a category filter was the
+            # reason for the empty list: the ref can carry other links the
+            # filter excluded, and the message should not claim otherwise.
+            categories = ", ".join(arguments.category)
+            print(f"no {categories} links for {ref.normalized}", file=sys.stderr)
+        else:
+            print(f"nothing links to {ref.normalized}", file=sys.stderr)
         return 1
     if arguments.refs_only:
         for link in found:
@@ -525,6 +538,8 @@ def _sources(arguments) -> int:
             file=sys.stderr,
         )
         return 1
+    from meturgaman.net import NetworkError
+
     for ref in refs:
         print(ref)
         if arguments.text:
@@ -532,7 +547,11 @@ def _sources(arguments) -> int:
                 reading = sefaria.read(ref)
                 for observation in reading.observations[:2]:
                     print(f"    [{observation.edition.language}] {observation.joined[:160]}")
-            except (LookupError, ValueError) as error:
+            except (LookupError, ValueError, NetworkError) as error:
+                # A curated topic's sources are not all plain text: a sheet
+                # ref answers with a shape `read` cannot parse and the fetch
+                # raises NetworkError rather than a lookup failure. One bad
+                # item should not cost the rest of the list.
                 print(f"    ({error})")
             print()
     return 0
@@ -590,6 +609,13 @@ def _sugya(arguments) -> int:
     from meturgaman.sources import sefaria
 
     found = sefaria.passage_boundary(arguments.ref)
+    if found is not None and found == sefaria.resolve(arguments.ref).normalized:
+        # The service's own no-op: asked for a boundary and handed back
+        # exactly the ref that was given. That is Sefaria saying nothing is
+        # mapped here, not confirmation that the passage is one segment
+        # wide, and printing it back as a boundary would read as the second
+        # thing.
+        found = None
     if arguments.json:
         return _emit_json({"ref": arguments.ref, "passage": found})
     print(found if found else f"no passage mapping for {arguments.ref}")
@@ -623,7 +649,15 @@ def _verify(arguments) -> int:
     if arguments.path == "-":
         text = sys.stdin.read()
     else:
-        text = Path(arguments.path).read_text(encoding="utf-8")
+        try:
+            text = Path(arguments.path).read_text(encoding="utf-8")
+        except OSError as error:
+            # A bare OSError repr ("[Errno 2] No such file or directory: ...")
+            # is Python's voice, not this tool's; say the same thing in a
+            # sentence a reader did not have to already know errno for.
+            print(f"refused: could not read {arguments.path!r}: {error.strerror}",
+                  file=sys.stderr)
+            return 1
     report = verify(text)
     if arguments.json:
         _emit_json({

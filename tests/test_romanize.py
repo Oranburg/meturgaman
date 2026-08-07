@@ -259,6 +259,24 @@ def test_reverse_reports_ambiguity_rather_than_choosing_quietly():
     assert any("ט" in note and "ת" in note for note in candidate.ambiguities)
 
 
+def test_reverse_keeps_word_boundaries_and_finals_per_word():
+    """A space is a boundary, not decoration to discard like an apostrophe.
+
+    The old scan treated the space the same way as a diacritic apostrophe
+    and ran the final-letter fix-up once for the whole reconstruction, so
+    "shalom aleichem" came back as one run-on string, "שׁלמלהם", with only
+    the very last letter of the whole phrase in its final form.
+    """
+    candidate = reverse.reverse("shalom aleichem", "sbl-general")[0]
+    words = candidate.letters.split(" ")
+    assert len(words) == 2, candidate.letters
+    # Both words end in mem here, and both must take the final form: the
+    # boundary is preserved and the fix-up runs on each word, not once for
+    # the whole reconstruction.
+    assert words[0][-1] == hebrew.FINAL_MEM
+    assert words[1][-1] == hebrew.FINAL_MEM
+
+
 def test_academic_is_more_reversible_than_general():
     """The point of the academic style is that it can be reversed."""
     academic = reverse.reverse("tôrâ", "sbl-academic")[0]

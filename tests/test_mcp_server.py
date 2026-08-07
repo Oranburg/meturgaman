@@ -75,3 +75,41 @@ def test_romanize_answers_offline_with_flags_inside(handshake):
     assert payload["scheme"] == "sbl-general"
     # Uncertainty travels in the result, never on a stderr nobody reads.
     assert any("sheva" in flag for flag in payload["flags"])
+
+
+def test_romanize_scheme_carries_an_enum_a_cold_client_can_read(handshake):
+    """A client that has never read the source should not have to guess a
+    scheme name and eat an error to learn the real vocabulary."""
+    send, proc, _ = handshake
+    send({"jsonrpc": "2.0", "id": 4, "method": "tools/list"})
+    tools = json.loads(proc.stdout.readline())["result"]["tools"]
+    romanize_tool = next(t for t in tools if t["name"] == "romanize")
+    enum = romanize_tool["inputSchema"]["properties"]["scheme"].get("enum")
+    assert enum is not None
+    assert "sbl-general" in enum
+    assert "yivo" in enum
+    # Blank stays valid: it is the sentinel for "use the default scheme".
+    assert "" in enum
+
+
+def test_every_tool_is_marked_read_only(handshake):
+    send, proc, _ = handshake
+    send({"jsonrpc": "2.0", "id": 5, "method": "tools/list"})
+    tools = json.loads(proc.stdout.readline())["result"]["tools"]
+    for tool in tools:
+        annotations = tool.get("annotations") or {}
+        assert annotations.get("readOnlyHint") is True, tool["name"]
+
+
+def test_calendars_refuses_a_malformed_date_cleanly(handshake):
+    """A raw unpack error, or worse, silent garbage sent to the service, is
+    what a cold client used to get from a date shaped like "not-a-date"."""
+    send, proc, _ = handshake
+    send({"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {
+        "name": "calendars", "arguments": {"date": "not-a-date"},
+    }})
+    reply = json.loads(proc.stdout.readline())["result"]
+    assert reply.get("isError") is True
+    message = reply["content"][0]["text"]
+    assert "not-a-date" in message
+    assert "unpack" not in message

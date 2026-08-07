@@ -14,6 +14,17 @@ import pytest
 from meturgaman.cli import main
 
 
+def test_verify_on_a_missing_file_refuses_in_its_own_voice(capsys):
+    code = main(["verify", "/nonexistent/path/does-not-exist.md"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "refused:" in captured.err
+    # A bare OSError repr ("[Errno 2] No such file or directory: ...") is
+    # Python's voice, not this tool's; the message must not leak it verbatim.
+    assert "Errno" not in captured.err
+    assert "does-not-exist.md" in captured.err
+
+
 def test_a_bad_scheme_name_refuses_instead_of_crashing(capsys):
     code = main(["romanize", "שָׁלוֹם", "--scheme", "no-such-scheme"])
     captured = capsys.readouterr()

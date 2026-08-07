@@ -28,6 +28,7 @@ import html
 import re
 import urllib.parse
 from dataclasses import dataclass, field
+from datetime import date as _date
 from typing import Any, Iterable
 
 from meturgaman.net import Fetched, NetworkError, RateLimit, get_json, post_json
@@ -477,7 +478,17 @@ def read(
         segments = _segments(entry.get("text"), ref.normalized)
         warnings: list[str] = []
         if entry.get("status") == "locked":
-            warnings.append("this version is locked; check the licence before quoting")
+            # Sefaria's own editorial freeze on this version, unrelated to
+            # copyright. A public-domain edition can be locked, and a
+            # restrictively licensed one can be unlocked; the licence is
+            # reported separately below and is the thing worth checking for
+            # quoting rights. Wording this as a licence warning made a fully
+            # quotable public-domain text read as a rights concern.
+            warnings.append(
+                "Sefaria has frozen this version against further edits or "
+                "corrections; that lock says nothing about the licence, "
+                "which is reported on its own line"
+            )
         if not edition.license:
             warnings.append("no licence stated for this edition")
         if not segments:
@@ -877,8 +888,18 @@ def calendars(*, date: str = "", diaspora: bool = True) -> dict[str, Any]:
     """Sefaria's own daily learning schedule: parashah, daf yomi, and the rest."""
     params: dict[str, Any] = {"diaspora": 1 if diaspora else 0}
     if date:
-        year, month, day = date.split("-")
-        params.update({"year": year, "month": month, "day": day})
+        # A strict ISO parse, not a `.split("-")` unpack: a malformed string
+        # with no hyphens once raised a raw "not enough values to unpack",
+        # and a string with exactly two hyphens but nonsense fields (e.g.
+        # "not-a-date") unpacked into garbage and reached the service
+        # silently rather than being refused.
+        try:
+            parsed = _date.fromisoformat(date)
+        except ValueError as error:
+            raise ValueError(
+                f"{date!r} is not a date in YYYY-MM-DD form: {error}"
+            ) from error
+        params.update({"year": parsed.year, "month": parsed.month, "day": parsed.day})
     return _get("/calendars", params).payload
 
 

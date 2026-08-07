@@ -84,20 +84,19 @@ def inverse_map(scheme: Scheme) -> dict[str, list[str]]:
     return inverse
 
 
-def _reverse_one(text: str, scheme: Scheme) -> Candidate:
-    inverse = inverse_map(scheme)
-    keys = sorted(inverse, key=len, reverse=True)
-    vowels = {value for value in scheme.vowels.values() if value}
-    vowels |= {
-        str(scheme.rule(key))
-        for key in ("shva_na", "tsere_male", "hireq_male", "holam_male", "shuruq")
-    }
-    vowels.discard("")
+def _reverse_word(lowered: str, keys: list[str], inverse: dict[str, list[str]],
+                   vowels: set[str], scheme_name: str) -> tuple[list[str], list[str]]:
+    """The letters and ambiguities for one word, no spaces inside it.
 
+    Factored out of `_reverse_one` so a multi-word phrase can apply the
+    final-letter fix-up once per word rather than once for the whole
+    reconstruction: run on the joined string, only the very last letter of
+    the last word ever saw the fix, and every other word-final consonant
+    stayed in its medial shape.
+    """
     letters: list[str] = []
     ambiguities: list[str] = []
     position = 0
-    lowered = text.lower()
 
     while position < len(lowered):
         for key in keys:
@@ -118,10 +117,10 @@ def _reverse_one(text: str, scheme: Scheme) -> Candidate:
                 # A vowel with no letter of its own was written as a point, and
                 # points are not reconstructed.
                 pass
-            elif character in "-’‘ʾʿʼʻ ":
+            elif character in "-’‘ʾʿʼʻ":
                 pass
             else:
-                ambiguities.append(f"{character!r} matches nothing in {scheme.name}")
+                ambiguities.append(f"{character!r} matches nothing in {scheme_name}")
             position += 1
 
     # Hebrew writes five letters differently at the end of a word, and a
@@ -132,8 +131,34 @@ def _reverse_one(text: str, scheme: Scheme) -> Candidate:
         if len(tail) == 1 and tail in hebrew.BASE_TO_FINAL:
             letters[-1] = hebrew.BASE_TO_FINAL[tail]
 
+    return letters, ambiguities
+
+
+def _reverse_one(text: str, scheme: Scheme) -> Candidate:
+    inverse = inverse_map(scheme)
+    keys = sorted(inverse, key=len, reverse=True)
+    vowels = {value for value in scheme.vowels.values() if value}
+    vowels |= {
+        str(scheme.rule(key))
+        for key in ("shva_na", "tsere_male", "hireq_male", "holam_male", "shuruq")
+    }
+    vowels.discard("")
+
+    # Split on whitespace before scanning, not during it: a space is a word
+    # boundary, not decoration to discard like an apostrophe. Discarding it
+    # in the same branch as diacritics used to run every word together and
+    # apply the final-letter fix-up only to the very last letter of the
+    # entire phrase.
+    words = text.lower().split()
+    all_letters: list[str] = []
+    all_ambiguities: list[str] = []
+    for word in words:
+        letters, ambiguities = _reverse_word(word, keys, inverse, vowels, scheme.name)
+        all_letters.append("".join(letters))
+        all_ambiguities.extend(ambiguities)
+
     return Candidate(
-        letters="".join(letters), scheme=scheme.name, ambiguities=ambiguities
+        letters=" ".join(all_letters), scheme=scheme.name, ambiguities=all_ambiguities
     )
 
 
