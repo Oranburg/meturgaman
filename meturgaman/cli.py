@@ -521,6 +521,27 @@ def _sugya(arguments) -> int:
     return 0
 
 
+def _anchors(arguments) -> int:
+    from meturgaman.sources import sefaria
+
+    works = sefaria.shape_summary(sefaria.shape(arguments.title))
+    if arguments.json:
+        return _emit_json({"works": works})
+    if not works or all(not work.anchors for work in works):
+        print(f"no populated anchors found for {arguments.title!r}", file=sys.stderr)
+        return 1
+    for work in works:
+        print(f"{work.title}")
+        print(
+            f"    {work.chapters} chapters, {work.populated} populated "
+            f"anchors, {work.total_segments} segments"
+        )
+        for anchor in work.anchors:
+            plural = "s" if anchor.segments != 1 else ""
+            print(f"    {anchor.reference:12} {anchor.segments} segment{plural}")
+    return 0
+
+
 def _verify(arguments) -> int:
     from meturgaman.verify import verify
 
@@ -943,6 +964,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify.add_argument("path", help="a file, or - for standard input")
     verify.set_defaults(handler=_verify)
+
+    anchors = commands.add_parser(
+        "anchors", parents=[machine],
+        help="every populated anchor in a work, counted from data",
+    )
+    anchors.add_argument("title", help="a work's title, as Sefaria names it")
+    anchors.set_defaults(handler=_anchors)
 
     day = commands.add_parser("day", parents=[machine],
                               help="the Jewish calendar for a date")

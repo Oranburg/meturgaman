@@ -33,7 +33,9 @@ marked as a model's reading rather than an edition's.
 Four disciplines that exist because answers without them failed audits:
 
 - **No census without an enumeration.** Do not say a work does something "in
-  nine places" unless you fetched the work and counted the places.
+  nine places" unless you counted the places from data.
+  `meturgaman anchors "Work Title"` prints every populated anchor with its
+  segment count; run it before any sentence that counts.
 - **No dressing your reading in the tool's authority.** Report what a command
   returned; argue your interpretation as your interpretation.
 - **Copy references exactly as fetched.** Sefaria's segmentation is what the

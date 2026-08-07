@@ -32,7 +32,10 @@ failed an audit:
   "Ravad glosses this book in nine places" is a claim about a whole work; it is
   true only if you fetched the work and counted. An answer whose quotations
   were all genuine once failed review because its overview was written from
-  memory and missed a third of the glosses.
+  memory and missed a third of the glosses. The tool for this is
+  `meturgaman anchors "Work Title"`: it prints every populated anchor with
+  its segment count, straight from the service's shape record. Run it before
+  any sentence that counts, and cite the anchors it prints.
 - **Never attribute to the tool a result it did not return.** If
   `meturgaman sugya` reports five passages across the page, do not write that
   it confirmed the page is one unit. Say what the tool said, then argue your

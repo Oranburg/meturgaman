@@ -40,7 +40,7 @@ __all__ = [
     "passage_boundary",
     "calendars", "name_candidates", "find_refs", "lookup_word",
     "topics", "topic", "topic_sources", "search", "search_topics",
-    "shape", "index_metadata",
+    "shape", "shape_summary", "Anchor", "WorkShape", "index_metadata",
     "VERSION_KEYWORDS", "RETURN_FORMATS",
 ]
 
@@ -885,6 +885,74 @@ def calendars(*, date: str = "", diaspora: bool = True) -> dict[str, Any]:
 def shape(title: str) -> Any:
     """The shape of a work: how many chapters, how many verses in each."""
     return _get(f"/shape/{title.replace(' ', '_')}").payload
+
+
+@dataclass(frozen=True)
+class Anchor:
+    """One populated place in a work: where it is, and how many segments."""
+
+    reference: str
+    segments: int
+
+
+@dataclass(frozen=True)
+class WorkShape:
+    """A work's populated anchors, counted from the service's shape record.
+
+    This exists so a count can be made from data instead of from memory.
+    An answer once described a work's glosses "in nine places" from memory
+    and was wrong; enumerating the shape record is what makes a census
+    sentence checkable.
+    """
+
+    title: str
+    chapters: int
+    anchors: tuple[Anchor, ...]
+
+    @property
+    def populated(self) -> int:
+        return len(self.anchors)
+
+    @property
+    def total_segments(self) -> int:
+        return sum(anchor.segments for anchor in self.anchors)
+
+
+def shape_summary(payload: Any) -> list[WorkShape]:
+    """Turn a raw shape payload into countable anchors. Pure, no network.
+
+    The service's `chapters` value is an int per chapter for evenly gridded
+    works, and a list per chapter for sparse ones, where each entry is the
+    segment count at that position and zero means nothing is there. Both
+    forms reduce to the same question: which positions hold text, and how
+    much.
+    """
+    works: list[WorkShape] = []
+    for record in payload if isinstance(payload, list) else [payload]:
+        if not isinstance(record, dict):
+            continue
+        title = str(record.get("title") or record.get("book") or "(untitled)")
+        chapters = record.get("chapters")
+        anchors: list[Anchor] = []
+        if isinstance(chapters, list):
+            for chapter_index, chapter in enumerate(chapters, start=1):
+                if isinstance(chapter, list):
+                    for position, count in enumerate(chapter, start=1):
+                        if isinstance(count, int) and count > 0:
+                            anchors.append(Anchor(
+                                reference=f"{chapter_index}:{position}",
+                                segments=count,
+                            ))
+                elif isinstance(chapter, int) and chapter > 0:
+                    anchors.append(Anchor(
+                        reference=str(chapter_index), segments=chapter
+                    ))
+        works.append(WorkShape(
+            title=title,
+            chapters=len(chapters) if isinstance(chapters, list) else 0,
+            anchors=tuple(anchors),
+        ))
+    return works
 
 
 def index_metadata(title: str) -> Any:
