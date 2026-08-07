@@ -25,7 +25,13 @@ dependencies = []
 # Local vocalization and morphology through Dicta's published models. These are
 # large and they run on the user's own machine, so they are opt-in. When they
 # are absent the tool says so plainly rather than quietly skipping the step.
-dicta = ["torch>=2.2", "transformers>=4.40"]
+dicta = ["torch>=2.2", "transformers>=4.40,<5"]
+# The upper bound matters. Dicta publishes the menaked models with
+# `trust_remote_code` modelling files written against the transformers 4.x API.
+# Under transformers 5.x `predict` returns cumulative word prefixes with no vowel
+# points at all, silently: "ברוך הוא" comes back as "ברוך ברוך הוא". It does not
+# raise, so a caller cannot tell. Verified 2026-08-06 against 5.14.1 (broken) and
+# 4.57.6 (correct).
 # The Model Context Protocol server, for Claude Desktop and Claude Code.
 # Optional for the same reason dicta is: the core stays standard library,
 # and `meturgaman-mcp` says what to install when the SDK is absent.
