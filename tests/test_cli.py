@@ -148,3 +148,93 @@ def test_no_cache_flag_disables_the_cache(monkeypatch):
     main(["romanize", "שָׁלוֹם", "--no-cache"])
     assert net.CACHE_DISABLED
     monkeypatch.setattr(net, "CACHE_DISABLED", False)
+
+
+# ---------------------------------------------------------------------------
+# `meturgaman law`, the Israeli legislation group
+# ---------------------------------------------------------------------------
+
+LAW_FIXTURE = "tests/fixtures/remedies-1970.web-copy.txt"
+
+
+@pytest.mark.parametrize(
+    "action",
+    ["tiers", "statutes"],
+)
+def test_the_law_group_takes_json_after_the_action_name(capsys, action):
+    """`--json` has to work where a hand puts it, which is last.
+
+    Attached only to the `law` group and not to its actions, argparse rejected
+    it after the action name with "unrecognized arguments: --json", which is
+    exactly where anyone types it.
+    """
+    assert main(["law", action, "--json"]) == 0
+    json.loads(capsys.readouterr().out)
+
+
+def test_law_tiers_marks_only_the_two_printable_as_law(capsys):
+    main(["law", "tiers", "--json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["printable_as_law"] == ["authorized", "enacted"]
+    assert payload["ladder"][0] == "enacted"
+
+
+def test_law_sources_omits_lsi_for_a_statute_the_series_never_reached(capsys):
+    main(["law", "sources", "int-sale-1999", "--json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert "lsi" not in [row["key"] for row in payload["sources"]]
+
+
+def test_an_unknown_statute_slug_refuses_and_lists_the_known_ones(capsys):
+    code = main(["law", "sources", "sale-law"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "refused:" in captured.err
+    assert "sale-1968" in captured.err
+
+
+def test_law_parse_reports_the_sections_it_found(capsys):
+    assert main(["law", "parse", LAW_FIXTURE, "--json"]) == 0
+    rows = json.loads(capsys.readouterr().out)
+    assert [row["number"] for row in rows] == [str(n) for n in range(1, 26)]
+
+
+def test_law_parse_refuses_a_file_with_no_sections_rather_than_returning_nothing(
+    capsys, tmp_path
+):
+    """An empty result that looks like an answer is the failure this tool is built against."""
+    path = tmp_path / "prose.txt"
+    path.write_text("A paragraph with no section numbering at all.\n", encoding="utf-8")
+    code = main(["law", "parse", str(path)])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "refused:" in captured.err
+
+
+def test_law_align_exits_non_zero_on_a_section_with_no_counterpart(capsys, tmp_path):
+    numbers = tmp_path / "numbers.txt"
+    numbers.write_text("\n".join(str(n) for n in range(1, 27)), encoding="utf-8")
+    code = main(["law", "align", "--hebrew", str(numbers), "--english", LAW_FIXTURE])
+    assert code == 1
+    assert "HEBREW WITH NO ENGLISH" in capsys.readouterr().out
+
+
+def test_law_align_exits_zero_when_every_section_pairs(capsys, tmp_path):
+    numbers = tmp_path / "numbers.txt"
+    numbers.write_text("\n".join(str(n) for n in range(1, 26)), encoding="utf-8")
+    code = main(["law", "align", "--hebrew", str(numbers), "--english", LAW_FIXTURE])
+    assert code == 0
+
+
+def test_law_reconcile_refuses_a_witness_spelled_wrong(capsys):
+    code = main(["law", "reconcile", "--witness", f"web:{LAW_FIXTURE}"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "key=tier:path" in captured.err
+
+
+def test_law_reconcile_refuses_an_unknown_tier(capsys):
+    code = main(["law", "reconcile", "--witness", f"web=offical:{LAW_FIXTURE}"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "not a tier" in captured.err

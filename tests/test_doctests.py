@@ -14,12 +14,17 @@ import pytest
 
 import meturgaman.romanize.engine
 import meturgaman.romanize.reverse
+import meturgaman.sources.israel
 
 
 @pytest.mark.parametrize(
     "module",
-    [meturgaman.romanize.engine, meturgaman.romanize.reverse],
-    ids=["engine", "reverse"],
+    [
+        meturgaman.romanize.engine,
+        meturgaman.romanize.reverse,
+        meturgaman.sources.israel,
+    ],
+    ids=["engine", "reverse", "israel"],
 )
 def test_offline_doctests_pass(module):
     found = doctest.testmod(module)

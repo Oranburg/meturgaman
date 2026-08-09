@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import json
+import re
 import sys
 from pathlib import Path
 from datetime import date
@@ -871,6 +872,189 @@ def _audio(arguments) -> int:
     return 0
 
 
+def _law(arguments) -> int:
+    """Modern Israeli legislation: what exists, what is held, what pairs.
+
+    Split out from the classical-text commands because the failure it guards
+    against is a different one. There, the risk is a Hebrew text supplied from
+    memory. Here, the Hebrew is usually easy and the English is the trap: an
+    unattributed web copy reads exactly like an authorized translation, and
+    only its provenance tells them apart.
+    """
+    from meturgaman.sources import israel
+
+    action = arguments.action
+
+    if action == "statutes":
+        rows = [israel.STATUTES[slug] for slug in sorted(israel.STATUTES)]
+        if arguments.json:
+            return _emit_json([dataclasses.asdict(row) for row in rows])
+        for row in rows:
+            print(f"{row.slug}")
+            print(f"  {row.english}")
+            print(f"  {row.hebrew}")
+            print(f"  gazette: {row.gazette}")
+            print(f"  L.S.I.:  {row.lsi or 'none; the series does not reach this statute'}")
+            if row.amendments:
+                print(f"  amended by: {', '.join(row.amendments)}")
+            print()
+        return 0
+
+    if action == "sources":
+        rows = israel.sources_for(arguments.statute)
+        law = israel.statute(arguments.statute)
+        if arguments.json:
+            return _emit_json({
+                "statute": dataclasses.asdict(law),
+                "sources": [dataclasses.asdict(row) for row in rows],
+            })
+        print(f"{law.english}  ({law.lsi or 'no L.S.I. citation'})\n")
+        for row in rows:
+            mark = "PRINTABLE AS LAW" if row.authority in israel.PRINTABLE_AS_LAW else ""
+            print(f"[{row.authority}] {row.name}  {mark}".rstrip())
+            print(f"  publisher:  {row.publisher}")
+            print(f"  reachable:  {row.reachable}" + (f"  {row.url}" if row.url else ""))
+            if row.coverage:
+                print(f"  coverage:   {row.coverage}")
+            if row.how:
+                print(f"  how:        {row.how}")
+            if row.caveat:
+                print(f"  CAVEAT:     {row.caveat}")
+            print()
+        print("Locating the law and its amendments (Hebrew, no English):\n")
+        for row in israel.LOCATORS:
+            print(f"[{row.authority}] {row.name}")
+            print(f"  reachable:  {row.reachable}  {row.url}")
+            print(f"  how:        {row.how}")
+            print(f"  CAVEAT:     {row.caveat}")
+            print()
+        return 0
+
+    if action == "hebrew":
+        text = israel.fetch_hebrew(arguments.statute)
+        if arguments.json:
+            payload = dataclasses.asdict(text)
+            payload["sha256"] = text.sha256
+            return _emit_json(payload)
+        print(f"{text.page}")
+        print(f"  revision {text.revision_id} of {text.revision_timestamp}")
+        print(f"  sha256 {text.sha256[:16]}  {len(text.wikitext)} characters")
+        print(f"  {text.url}")
+        print(f"  licence: {text.licence}")
+        print(f"  authority: {text.authority}")
+        return 0
+
+    if action == "amendments":
+        text = israel.fetch_hebrew(arguments.statute)
+        amended = israel.amended_sections(text.wikitext)
+        every = sorted(
+            {m.group("number").strip()
+             for m in israel._SECTION_TEMPLATE.finditer(text.wikitext)},
+            key=lambda n: (int(re.match(r"\d+", n).group()), n),
+        )
+        untouched = [n for n in every if n not in amended]
+        if arguments.json:
+            return _emit_json({
+                "statute": arguments.statute,
+                "revision_id": text.revision_id,
+                "revision_timestamp": text.revision_timestamp,
+                "sections": every,
+                "amended": amended,
+                "unamended": untouched,
+            })
+        print(f"{text.page}  (revision {text.revision_id} of {text.revision_timestamp})")
+        print(f"  {len(every)} section(s); {len(amended)} carry an amendment marker\n")
+        for number in sorted(amended, key=lambda n: (int(re.match(r"\d+", n).group()), n)):
+            print(f"  AMENDED  § {number:<5} {amended[number]}")
+        if not amended:
+            print("  no section carries an amendment marker")
+        print(f"\n  unamended since enactment: {', '.join(untouched)}")
+        print(
+            "\n  An as-enacted English translation pairs honestly with every unamended\n"
+            "  section. For an amended one, print the English with a dated note or leave\n"
+            "  the section Hebrew only."
+        )
+        return 0
+
+    if action == "parse":
+        source = Path(arguments.file)
+        sections = israel.parse_english(source.read_text(encoding="utf-8"))
+        if not sections:
+            print(
+                f"refused: parsed no sections out of {source.name}. A section is "
+                "recognized by its number and a period at the left margin; if this "
+                "text numbers them another way, say so rather than reshaping the file.",
+                file=sys.stderr,
+            )
+            return 1
+        if arguments.json:
+            return _emit_json([dataclasses.asdict(row) for row in sections])
+        print(f"parsed {len(sections)} section(s) from {source.name}\n")
+        for row in sections:
+            head = " ".join(row.text.split())[:90]
+            note = f"   [marginal candidate: {row.marginal}]" if row.marginal else ""
+            print(f"  § {row.number:<5} {head}{note}")
+        return 0
+
+    if action == "align":
+        english = israel.parse_english(Path(arguments.english).read_text(encoding="utf-8"))
+        numbers = [line.strip() for line in Path(arguments.hebrew).read_text(
+            encoding="utf-8").splitlines() if line.strip()]
+        result = israel.align(numbers, english)
+        if arguments.json:
+            payload = dataclasses.asdict(result)
+            payload["ok"] = result.ok
+            return _emit_json(payload)
+        print(result.report())
+        return 0 if result.ok else 1
+
+    if action == "reconcile":
+        witnesses = {}
+        for spec in arguments.witness:
+            if "=" not in spec or ":" not in spec.split("=", 1)[1]:
+                print(
+                    f"refused: --witness wants key=tier:path, not {spec!r}. "
+                    f"Tiers: {', '.join(israel.AUTHORITY_LADDER)}.",
+                    file=sys.stderr,
+                )
+                return 1
+            key, rest = spec.split("=", 1)
+            tier, path = rest.split(":", 1)
+            if tier not in israel.AUTHORITY_LADDER:
+                print(f"refused: {tier!r} is not a tier; see `meturgaman law tiers`.",
+                      file=sys.stderr)
+                return 1
+            witnesses[key] = (
+                tier, israel.parse_english(Path(path).read_text(encoding="utf-8"))
+            )
+        verdicts = israel.reconcile(witnesses)
+        if arguments.json:
+            return _emit_json([dataclasses.asdict(v) for v in verdicts])
+        counts = {"confirmed": 0, "single": 0, "disputed": 0}
+        for verdict in verdicts:
+            counts[verdict.status] += 1
+        for verdict in verdicts:
+            flag = "" if verdict.printable_as_law else "  (not printable as law)"
+            print(f"  § {verdict.number:<5} {verdict.status:<10} "
+                  f"best tier: {verdict.best_authority}{flag}")
+        print(f"\n  confirmed {counts['confirmed']}  single {counts['single']}  "
+              f"disputed {counts['disputed']}")
+        return 1 if counts["disputed"] else 0
+
+    if action == "tiers":
+        if arguments.json:
+            return _emit_json({
+                "ladder": list(israel.AUTHORITY_LADDER),
+                "printable_as_law": sorted(israel.PRINTABLE_AS_LAW),
+            })
+        for rank, tier in enumerate(israel.AUTHORITY_LADDER):
+            mark = "  PRINTABLE AS LAW" if tier in israel.PRINTABLE_AS_LAW else ""
+            print(f"  {rank}  {tier}{mark}")
+        return 0
+
+    raise ValueError(f"no law action {action!r}")
+
+
 def _vocalize(arguments) -> int:
     from meturgaman.sources import dicta
 
@@ -1146,6 +1330,54 @@ def build_parser() -> argparse.ArgumentParser:
     audio.add_argument("--output", default=None, help="write audio to a file")
     audio.add_argument("--download", default=None, help="save the recording here")
     audio.set_defaults(handler=_audio)
+
+    law = commands.add_parser(
+        "law", parents=[machine],
+        help="modern Israeli legislation: statutes, translation sources, alignment",
+        description=(
+            "Locate, fetch, parse, align and reconcile modern Israeli statutes. "
+            "It does not translate. Every English text carries the tier of "
+            "whoever made it, and only the top two tiers print as the law."
+        ),
+    )
+    law_actions = law.add_subparsers(dest="action", required=True)
+    # Every action carries the shared flags too, so `--json` works wherever a
+    # hand puts it. Attached only to the group, it is rejected after the action
+    # name, which is exactly where anyone types it.
+    law_actions.add_parser("statutes", parents=[machine],
+                           help="the statutes in the registry")
+    law_actions.add_parser("tiers", parents=[machine],
+                           help="the authority ladder, best first")
+    law_sources = law_actions.add_parser(
+        "sources", parents=[machine],
+        help="where an English text of this statute can be had")
+    law_sources.add_argument("statute", help="a slug from `meturgaman law statutes`")
+    law_hebrew = law_actions.add_parser(
+        "hebrew", parents=[machine],
+        help="fetch the consolidated Hebrew, with its revision id")
+    law_hebrew.add_argument("statute")
+    law_amend = law_actions.add_parser(
+        "amendments", parents=[machine],
+        help="which sections have been amended since enactment, and by what")
+    law_amend.add_argument("statute")
+    law_parse = law_actions.add_parser(
+        "parse", parents=[machine],
+        help="split a delivered English text into numbered sections")
+    law_parse.add_argument("file")
+    law_align = law_actions.add_parser(
+        "align", parents=[machine],
+        help="join Hebrew section numbers to English sections, on the number")
+    law_align.add_argument("--hebrew", required=True,
+                           help="a file of section numbers, one per line")
+    law_align.add_argument("--english", required=True,
+                           help="the delivered English text")
+    law_reconcile = law_actions.add_parser(
+        "reconcile", parents=[machine],
+        help="compare several English witnesses section by section")
+    law_reconcile.add_argument(
+        "--witness", action="append", required=True, metavar="KEY=TIER:PATH",
+        help="repeatable; TIER is one from `meturgaman law tiers`")
+    law.set_defaults(handler=_law)
 
     vocalize = commands.add_parser("vocalize", parents=[fresh],
                                    help="add vowel points (needs the dicta extra)")

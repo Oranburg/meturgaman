@@ -1,0 +1,494 @@
+
+                       CHAPTER ONE:      Making of Contract
+
+Mode of          1. A contract is made by way of offer and acceptance in accordance
+making              with the provisions of this chapter.
+Contract
+Offer            2.   A person's proposal to another person constitutes an offer if it
+                      attests to the offeror's resolve to enter into a contract with the
+                      offeree and is sufficiently definite to enable the contract to be
+                      concluded by acceptance of the offer. A proposal may be to
+                      the public.
+Withdrawal       3.   (a) The offeror may withdraw the offer by notice to the offeree,
+of offer                  provided that the notice of withdrawal is delivered to the
+                          offeree before he has given notice of acceptance.
+                      (b) Where the offeror has declared that the offer is irrevocable
+                          or has set a time for its acceptance, he may not withdraw
+                          it after it has been delivered to the offeree.
+Lapse of         4. An offer lapses -
+offer                 (1) when the offeree has rejected it or the time for its ac-
+                            ceptance has elapsed;
+                      (2)   when before notice of acceptance is given the offeror or
+                            offeree dies or becomes legally incompetent or a receiving
+                            order or winding-up order is made against him.
+
+Acceptance       5. Acceptance shall be by notice by the offeree delivered to the
+                    offeror and attesting to the offeree's resolve to enter into the
+                    contract with the offeror in accordance with the offer.
+
+Acceptance       6.   (a) Acceptance may be by an act in implementation of the
+by way of                 contract or by some other conduct if these modes of ac-
+conduct
+                          ceptance are implied in the offer; and for the purposes of
+                          sections 3(a) and 4(2), conduct as aforesaid is treated
+                          as notification of acceptance.
+                      (b) A declaration by an offeror that the absence of any response
+                          on the part of the offeree shall be regarded as acceptance
+                          is of no effect.
+42 Sec. 34 is clearly concerned with "an obligation.., in favour of a person who is
+   not a party to the contract" in contrast to an obligation towards him which would
+   turn him into a contractual party.
+ * LL.M., Dr. Jur., Lecturer, Faculty of Law, Hebrew University of Jerusalem.
+No. 2, 1974]                           LEGISLATION                                     283
+
+Presumption         7.    An offer which is exclusively for the benefit of the offeree is
+of                        presumed to have been accepted by him unless he notifies the
+acceptance                offeror of his opposition to it within a reasonable time after it
+                          comes to his knowledge.
+
+Time                8.    (a) An offer can only be accepted within the period fixed
+for                           therein or, if no period has been fixed, within a reason-
+acceptance                    able time.
+
+                          (b) Where an offeree gives notice of acceptance in due time,
+                              but its delivery to the offeror is delayed for a reason not
+                              dependent upon the offeree and unknown to him, the con-
+                              tract is regarded as having been made unless the offeror
+                              notifies the offeree of the rejection of the acceptance im-
+                              mediately after the notice of acceptance is delivered to him.
+
+Acceptance          9. Acceptance of an offer after it has lapsed is tantamount to a
+after                  new offer.
+lapse
+Withdrawal         10. The offeree may withdraw his acceptance by notice to the
+of                     offeror, provided that notice of the withdrawal is not delivered
+acceptance             to the offeror after the notice of acceptance has been delivered
+                          to him or after he has become aware of the acceptance in the
+                          manner indicated in section 6(a).
+
+Acceptance         11.    Acceptance involving an addition to or a limitation or some
+with                      other variation of the offer is tantamount to a new offer.
+variation
+Negotiation        12.    (a) In negotiating a contract, a person shall act in customary
+in good                       manner and in good faith.
+faith
+                          (b) A party who does not act in customary manner and in
+                              good faith shall be liable to pay compensation to the other
+                              party for the damage caused to him in consequence of the
+                              negotiations or the making of the contract, and the pro-
+                              visions of sections 10, 13 and 14 of the Contracts (Remedies
+                              for Breach of Contract) Law, 5731-1970,1 shall apply mu-
+                              tatis mutandis.
+
+
+                         CHAPTER Two: Rescission of Contract by
+                             Reason of Defect in Making It
+Contract           13. A contract made merely for appearance sake is void. This pro-
+made for               vision shall not affect a right acquired by a third party in bona
+appearance             fide reliance on the existence of a contract.
+sake
+Mistake            14.    (a) Where a person has entered into a contract in consequence
+                              of a mistake and it may be assumed that but for the mis-
+                              take he would not have entered into it, and the other party
+                              knows or should have known this, he may rescind the contract.
+
+ 1 25 L.S.I. 11.
+                             ISRAEL LAW REVIEW                        [Is.L.R. Vol. 9.
+
+                   (b) Where a person has entered into a contract in consequence
+                       of a mistake and it may be assumed that but for the mistake
+                       he would not have entered into it, but the other party did
+                       not know and need not have known this, the Court may,
+                       on the application of the party who was mistaken, rescind
+                       the contract if it considers it just so to do. Upon doing so,
+                       the Court may require the party who was mistaken to pay
+                       compensation for the damage caused to the other party in
+                       consequence of the making of the contract.
+                   (c) A mistake is not a ground for rescission of the contract
+                       under this section if the contract can be preserved by
+                       rectifying the mistake and the other party, before the con-
+                       tract has been rescinded, gives notice that he is prepared
+                       to rectify it.
+                   (d) For the purposes of this section and of section 15, "mistake"
+                       means a mistake of fact or of law, but does not include a
+                       mistake as to the expediency of the transaction.
+
+Deceit       15.   A person who has entered into a contract in consequence of a
+                   mistake resulting from deceit practised upon him by the other
+                   party or a person acting on his behalf may rescind the contract.
+                   For this purpose, "deceit" includes the non-disclosure of facts
+                   which according to law, custom or the circumstances the other
+                   party should have disclosed.
+Clerical     16. Where a clerical or similar error has occurred in a contract,
+error              the contract shall be rectified in accordance with the presumed
+                   intention of the parties and the error shall not be a ground
+                   for rescission of the contract.
+
+Duress       17.   (a) A person who has entered into a contract in consequence
+                       of duress, by force or threats applied to him by the other
+                       party or a person acting on his behalf may rescind the
+                       contract.
+                   (b) A bona fide warning of the exercise of a right does not
+                       constitute a threat for the purposes of this section.
+
+Extortion    18.   Where a person has entered into a contract in consequence of
+                   the other party or a person acting on his behalf, taking ad-
+                   vantage of his distress, mental or physical weakness or inex-
+                   perience, and the terms of the contract are less favourable to
+                   an unreasonable degree than is customary, he may rescind the
+                   contract.
+Partial      19. Where the contract is severable and the ground for rescission
+rescission         relates only to one part thereof, such part alone shall be capable
+                   of rescission. But if it is to be assumed that the party entitled
+                   to rescind would not have entered into the contract but for that
+                   ground, he may either rescind the said part or the whole contract.
+No. 2, 1974]                        LEGISLATION                                      285
+
+Mode of          20. Rescission of a contract shall be by notice by one party to the
+rescission           other party given within a reasonable time after becoming aware
+                     of the ground for rescission or, in the case of duress, within a
+                     reasonable time after becoming aware that duress has ceased.
+
+Restitution     21.   Where a contract has been rescinded, each party shall restore
+after                 to the other party what he has received under the contract or,
+rescission            if restitution is impossible or unreasonable, pay him the value
+                      of what he has received.
+
+Saving of        22. The provisions    of this chapter shall not derogate      from any
+remedies             other remedy.
+
+
+                 CHAPTER   THREE:     Form and Contents of Contract
+Form of          23. A contract may be made orally, in writing or in some other
+contract             form unless a particular form is a condition of its validity by
+                      virtue of law or agreement between the parties.
+
+Contents of      24. The contents of a contract may be whatever is agreed upon
+contracts            by the parties.
+
+Interpreta-      25. (a) A contract shall be interpreted in accordance with the in-
+tion of                  tention of the parties as appearing therefrom or, in so far
+contract                 as it does not so appear, as appearing from the circumstances.
+
+                      (b) Where a contract is capable of different interpretations, an
+                          interpretation preserving it is preferable to an interpretation
+                          according to which it is void.
+                      (c) Expressions and stipulations in a contract which are custo-
+                          marily used in contracts of that kind shall be interpreted in
+                          accordance with the meanings assigned to them in such
+                          contracts.
+                                                                                       2
+                      (d) Sections 2, 3, 5, 9(a) and 36 of the Interpretation Ordinance
+                          shall apply mutatis mutandis to the interpretation of a
+                          contract.
+
+Supplemen-       26. Particulars not determined by or under the contract shall be in
+tary                 accordance with the practice obtaining between the parties, or
+particulars          in the absence of such a practice, in accordance with the prac-
+                      tice customary in contracts of that kind, and such particulars
+                      shall also be regarded as having been agreed.
+
+Conditional      27. (a) A contract may depend on the fulfilment of a condition
+contract                 (hereinafter referred to as a "suspensory condition") or may
+                         cease upon the fulfilment of a condition (hereinafter re-
+                         ferred to as a "resolutory condition").
+                     (b) Where a contract requires the consent of a third party or
+
+ 2   [New Version] L.S.I. 5
+                              ISRAEL LAW REVIEW                          [Is.L.R. Vol. 9.
+
+                         a licence under any enactment, the receipt of such consent
+                         or licence is presumed to be a suspensory condition.
+                     (c) Where a contract is subject to a suspensory condition, each
+                         party is entitled to relief to prevent its breach even before
+                         the condition is fulfilled.
+Frustration    28.   (a) Where a contract is subject to a suspensory condition and
+condition                one party prevents fulfilment of the condition, such party
+                         is not entitled to rely on the nonfulfilment.
+                     (b) Where a contract is subject to a resolutory condition and
+                         one party causes fulfilment of the condition, such party is
+                         not entitled to rely on the fulfilment.
+                     (c) The provisions of this section shall not apply where the
+                         condition is something that according to the contract a
+                         party is at liberty to do or not to do or where a party does
+                         not prevent or cause the fulfilment of the condition wilfully
+                         or negligently.
+
+Voidness of    29. Where a contract is subject to a condition and the condition
+contract or        is not fulfilled within the period fixed therefor or, where no
+condition          period has been fixed, within a reasonable time after the making
+                     of the contract, then, in the case of a suspensory condition, the
+                     contract or in the case of a resolutory condition, the condition
+                     shall become void.
+
+Invalid        30. A contract the making, contents or object of which is or are
+contract           illegal, immoral or contrary to public policy is void.
+
+Application    31.   The provisions of sections 19 to 21 shall apply mutatis mutandis
+of                   to the avoidance of a contract under this chapter: Provided that
+provisions           in the case of avoidance under section 30 the Court may, if it
+                     deems it just so to do and on such conditions as it sees fit,
+                     relieve a party of the whole or part of the duty under section 21
+                     and, in so far as one party has fulfilled his obligation under
+                     the contract, require the other party to fulfil the whole or part
+                     of the corresponding obligation.
+
+Gambling,      32.   (a) A gambling, lottery or betting contract under which a
+lottery or               party may win some benefit, the winning being dependent
+betting                  on fate, guesswork or a chance occurrence rather than on
+contract                 ounderstanding
+                              ae    uswr        racac           curnerte        hno
+                                         or ability, is not actionable and does not
+                                                                                    give
+                         rise to compensation.
+                     (b) The provisions of this section shall not apply to gambling,
+                         a lottery or betting regulated by Law or for the conduct of
+                         which a permit has been issued under any Law.
+Contract for   33. Where under any contract a mark, title, prize or the like is
+giving marks       to be given according to a decision or evaluation by one of the
+                   parties or a third party, such decision or evaluation shall not
+                   be the subject of Court proceedings.
+No. 2, 1974]                       LEGISLATION
+
+
+               CHAPTER FOUR:      Contract in Favour of Third Party
+
+Conferment     34. An obligation assumed by a person by contract in favour of a
+of right           person who is not a party to the contract (such person here-
+                     inafter referred to as "the beneficiary") confers on the beneficiary
+                     the right to demand fulfilment of the obligation if the intention
+                     to confer this right on him is apparent from the contract.
+Repudiation    35. The beneficiary's right to demand fulfilment of the obligation
+of right             becomes void retroactively if within a reasonable time after one
+                     of the parties to the contract informs him of the right he informs
+                     one of them of his repudiation thereof.
+
+Termination    36.   (a) So long as neither of the parties has informed the beneficiary
+of right                 of his right under the contract they may vary or terminate
+                         such right by varying the contract.
+                     (b) In the case of an obligation to be fulfilled in consequence
+                         of a person's death-by virtue of an insurance contract or
+                         membership in a pension or provident fund or on some other
+                         similar ground-the creditor may, by notice to the debtor or
+                         by will of which notice is given to the debtor, terminate the
+                         beneficiary's right or replace him with another beneficiary,
+                         even after he has been informed of his right.
+
+Plea           37. Any plea available to the debtor against the creditor in con-
+available          nection with the obligation is also available to him against the
+against            beneficiary.
+beneficiary
+
+Saving of      38. The beneficiary's right shall not derogate from the creditor's right
+creditor's         to demand from the debtor the fulfilment of the obligation in
+right              favour of the beneficiary.
+
+
+                     CHAPTER    FrVE:   Performance of Contract
+
+Performance    39. An obligation or right arising out of a contract shall be fulfilled
+in good            or exercised in customary manner and in good faith.
+faith
+Performance    40. An obligation may be fulfilled by a person other than the debtor
+by whom            unless according to the nature of the obligation or to the agree-
+                     ment between the parties the debtor must fulfil it personally.
+Date for       41.   An obligation the date for the fulfilment of which has not been
+performance          agreed upon shall be fulfilled within a reasonable time after the
+                   making of the contract, at a date of which the creditor has given
+                   the debtor reasonable notice in advance.
+Early          42. An obligation may be fulfilled before the due date, provided the
+performance          debtor has given the creditor reasonable notice in advance and
+                     the creditor is not adversely affected.
+288                           ISRAEL LAW REVIEW                           [Is.L.R. Vol. 9.
+
+Postponement   43.   (a) The date for the fulfilment of the obligation is postponed -
+of
+                     (1) if its fulfilment at the due date is prevented by a circumstance
+performance
+                         depending on the creditor-until the obstacle has been
+                         removed;
+                     (2) if its fulfilment is conditional upon the prior fulfilment of an
+                         obligation of the creditor-until such obligation has been
+                         fulfilled;
+                     (3) if the parties must fulfil their obligations pari passu-so long
+                         as the creditor is not prepared to fulfil the obligation imposed
+                         on him.
+                     (b) Where the date for the fulfilment of an obligation has been
+                         postponed under subsection (a), the Court may, if it deems
+                         it just so to do, require the creditor to pay compensation
+                         for the damage caused to the debtor by the postponement
+                         even if no infringement of the contract by the creditor is
+                         involved and, if the debtor is bound to make periodical pay-
+                         ments until the fulfilment of the obligation, release him from
+                         the payments during the period of postponement.
+
+Place of       44.   (a) An obligation the place for the fulfilment of which has
+performance              not been agreed upon shall be fulfilled at the creditor's place
+                         of business or, if he has no place of business, at his permanent
+                         place of residence.
+                     (b) Where the creditor changes his place of business or place
+                         of residence after the making of the contract, he shall bear
+                         the additional expenses arising out of the fulfilment of the
+                         obligation at the new place.
+
+Medium         45. An obligation to provide a commodity or service the kind and
+performance        quality of which have not been agreed upon shall be fulfilled by
+                   providing a commodity or service of medium kind and quality.
+
+Performance    46.   An obligation to make for a commodity or service a payment the
+by paying            amount of which has not been agreed upon shall be fulfilled by
+appropriate          paying an amount which according to the circumstances at the
+amount
+                     time the contract was made it would have been appropriate to pay.
+
+Israel         47. An obligation to make in foreign currency in Israel a payment
+currency           the making of which in that currency is forbidden by law shall
+                   be fulfilled by making it in Israel currency at the official rate of
+                   exchange obtaining on the day of payment.
+
+Conditional    48. Where for the purpose of fulfilling an obligation the debtor as-
+fulfilment         sumes another obligation towards the creditor or transfers to
+                   him a right in respect of a third party, it is presumed that it is
+                   not intended to terminate such first-mentioned obligation unless
+                   the other obligation has been fulfilled or the right realised.
+No. 2, 1974]                         LEGISLATION
+
+Appropriation    49. An amount paid towards the discharge of a single obligation shall
+of payments          first be appropriated to the account of expenses which the debtor
+in the case          has undertaken to pay in respect of that obligation, then to the
+of one
+obligation           account of interest and finally to the account of the obligation
+                     itself.
+
+Appropriation    50.   Where an amount is paid to the creditor while the debtor has
+of payments            several obligations towards him, the debtor may indicate at the
+in the case of         time of payment the obligation to the account of which the amount
+obligations
+                       is to be appropriated; if he does not, the creditor may do so.
+
+Choice           51.   (a) In the case of alternative obligations, the debtor may, by
+between                    notice to the creditor within the period fixed therefor or,
+alternative                where no period has been fixed, within a reasonable time
+obligations
+                           prior to the date of fulfilment, choose the obligation which
+                           he will fulfil. If he does not do so, the creditor may choose
+                           the obligation by notice to the debtor.
+                       (b) Where it has been agreed that the creditor shall have the
+                           right of choice and he does not exercise it within the period
+                           fixed therefor or, where no period has been fixed, within a
+                           reasonable period prior to the date of fulfilment, the debtor
+                           may choose the obligation by notice to the creditor.
+
+Substituted      52. Where the fulfilment of an obligation has become impossible,
+fulfilment           and the debtor has accordingly a right to compensation or in-
+                     demnification against a third party, the debtor shall transfer the
+                     right or what he has received thereunder to the creditor to the
+                     extent of the value of the obligation.
+
+Set-off          53.   (a) Mutual monetary obligations arising out of one transaction
+                           the time for the fulfilment of which has arrived may be set
+                           off by notice by one party to the other. The same applies to
+                           monetary obligations not arising out of one transaction if
+                           they are liquidated obligations.
+                       (b) An obligation the right to the fulfilment of which is not
+                           attachable shall not be set off.
+                       (c) The provisions of sections 49 and 50 shall also apply, mutatis
+                           mutandis, to discharge by way of set-off.
+
+
+                       CHAPTER   SIX: Several Debtors and Creditors
+
+Several          54. Where two persons are under one obligation, it is presumed that
+debtors              they are liable jointly and severally.
+
+Joint and        55.   (a) Where two persons are jointly and severally liable, the
+several                    creditor may demand fulfilment of the whole or part of the
+liability
+                           obligation from both of them together or from each of them
+                           separately, but he shall not recover more than is due to him.
+                       (b) If the obligation of one of the debtors becomes void or is
+                           voided, the obligation of the other also becomes void unless
+                             ISRAEL LAW REVIEW                           [Is.L.R. Vol. 9.
+                        the voidance arises out of a defect in the competence or
+                        representation of the first-mentioned debtor.
+                    (c) If the creditor discharges one of the debtors of the whole
+                        or part of the obligation-by way of waiver, remission,
+                        compromise or otherwise-the other is discharged to the same
+                        extent unless a different intention appears from the discharge.
+Apportion-    56.   (a) Where two persons are under one obligation, it is presumed
+ment                    that as between themselves they bear it in equal shares.
+obligation
+between             (b) Where one debtor has paid to the creditor more than his
+debtors                 share of the burden of the obligation, he is entitled to recover
+                        from the other debtor in accordance with their respective
+                        shares.
+                    (c) Where there are more than two debtors and there is no
+                        reasonable possibility of recovering from one of them, his
+                        share shall be borne by the other debtor in accordance with
+                        respective shares.
+                    (d) Where the obligation of one debtor becomes void under
+                        section 55 (b), the voidance arising from a defect in his
+                        competence or representation, the other is not entitled to re-
+                        cover from him. Where one debtor is discharged under
+                        section 55 (c) and the discharge does not include the other,
+                        the discharge does not affect the right of recovery against the
+                        other under this section.
+Restriction   57.   A debtor who has fulfilled the obligation in excess of his share
+on right of         is not entitled to recover from another debtor in so far as he
+recovery            could have been discharged vis-4-vis the creditor by virtue of a
+                    plea which was known to him but of which he did not avail
+                    himself.
+Transfer of   58.   (a) Any charge or other right given to a creditor as security
+security                for the obligation shall, in so far as the creditor is not
+                        adversely affected thereby pass to a debtor who has fulfilled
+                        the obligation in excess of his share as security for his right
+                        to recover from another debtor.
+                    (b) Where a charge or right has passed under subsection (a),
+                        the parties shall, on the demand of the debtor who has fulfilled
+                        the obligation, do the acts necessary in order that the transfer
+                        may be valid in all respects.
+Several       59.   (a) Where one obligation exists vis-h-vis two persons, it is
+creditors               presumed that each of them may demand its fulfilment, but
+                        they shall not recover from the debtor more than is due from
+                        him. The debtor may at his choice fulfil the obligation
+                        towards one of the creditors so long as judgment has not
+                        been given in favour of the other.
+                    (b) Creditors as aforesaid are presumed to be entitled in equal
+                        shares. If the obligation has been fulfilled towards one of
+                        them, the other may demand his share from him.
+No. 2, 1974]                       LEGISLATION
+
+
+                           CHAPTER SEVEN:    Miscellaneous
+
+Manner and      60.   (a) Notice under this Law shall be given in the manner customary
+time of                   in the circumstances of the case.
+giving notice         (b) Notice under this Law shall be taken to have been served
+
+                          when it reached the addressee or his address.
+
+Scope of        61.   (a) The provisions of this Law shall apply where no other
+application               Law contains special provisions regarding the matter in
+                          question.
+                      (b) The provisions of this Law shall as far as appropriate and
+                          mutatis mutandis, apply also to legal acts other than con-
+                          tracts and to obligations not arising from a contract.
+
+Repeal          62. There are hereby repealed -
+                    (1) articles 658, 948, 949 and 1003 to 1007 and the Twelfth
+                        Book of the Mejelle;
+                    (2) article 64 of the Ottoman Code of Civil Procedure of the
+                        2nd Rejeb, 1296 (21st une, 1879).
+
+Autarky of      63. Article 46 of the Palestine Order-in-Council,    1922-1947 s , shall
+Law                 not apply to matters dealt with by this Law.
+
+Commence-       64. This Law shall come into force on the Ist Elul, 5733 (29th
+ment and            August, 1973). Contracts made before the coming into force of
+transitional        this Law shall continue to be governed by the previous law.
+provision
+
+
+
+
+3 Drayton, Laws of Palestine III, p. 2569
