@@ -54,6 +54,46 @@ meturgaman romanize "כָּל־הָאָרֶץ"              # kol-ha-’arets
 meturgaman audio "Genesis 1:1"                # chanted, by a person
 ```
 
+## Modern Israeli law
+
+The same instrument, pointed at the statute book. In the classical library the
+risk is a Hebrew text supplied from memory. In Israeli legislation the Hebrew is
+usually the easy part and the English is the trap: an unattributed copy of a
+statute on the open web is complete, fluent, right about the section numbering,
+and not the authorized translation, and nothing on its face says so.
+
+```
+meturgaman law statutes                    # the registry
+meturgaman law tiers                       # the authority ladder
+meturgaman law sources remedies-1970       # where an English text can be had
+meturgaman law hebrew remedies-1970        # consolidated Hebrew, with its revision id
+meturgaman law parse delivery.txt --json   # split a delivered English text into sections
+meturgaman law align --hebrew numbers.txt --english delivery.txt
+meturgaman law reconcile --witness lsi=authorized:a.txt --witness web=unattributed:b.txt
+```
+
+**It does not translate.** It locates, fetches, parses, aligns and reconciles,
+and every artifact carries the tier of what it came from. The tiers, best first,
+are `enacted` (the English is law, or authentic treaty text), `authorized`
+(*Laws of the State of Israel*, the Ministry of Justice's own translation,
+authorized and not binding), `government`, `commercial`, `scholarly`,
+`unattributed`, and `assistant`. Only the first two print as the law. A
+translation a model produced is tier `assistant`, says so wherever it appears,
+and never stands as the text.
+
+Three facts the registry knows so that nobody has to remember them. L.S.I. runs
+to volume 45 and stops around 1989, so a later statute has no authorized English
+at all and the registry says so rather than sending anyone to a volume that does
+not exist. L.S.I. prints the law **as enacted**, so setting it beside a
+consolidated Hebrew text can print two different laws and call one a translation
+of the other. And a section's marginal heading is typeset in its own column, so
+every flattening of the columns puts it somewhere a naive read will misfile it;
+the parser reports it as a candidate and refuses to attach it.
+
+Pairing is on the section number and never on position. `align` exits non-zero
+on any section without a counterpart, because a bilingual page built over a gap
+prints one column beside the wrong other column and shows nothing.
+
 ## Walking the tradition
 
 A halakhic question runs Torah, Mishnah, Gemara, the Rishonim, the codes,
