@@ -6,10 +6,18 @@ talks to it.
 
 Written against the contract, not against memory
 ------------------------------------------------
-`docs/api/sefaria-llms.txt` is Sefaria's own index of every endpoint, committed
-to this repository so the code can be checked against what the service actually
-publishes rather than against what someone recalled. When Sefaria changes, that
-file is what to refetch first.
+`docs/api/sefaria-openapi.json` is Sefaria's own OpenAPI document, all sixty of
+its paths with their parameters, defaults and response schemas, and
+`docs/api/sefaria-llms.txt` is its index of the prose about them. Both are
+committed to this repository so the code can be checked against what the service
+publishes rather than against what someone recalled, and both are what to refetch
+first when Sefaria changes. `docs/api/README.md` records their provenance.
+
+A spec states signatures rather than behaviour, and this one is wrong in at least
+one place that matters here: it describes `version=all` as returning all the
+texts, and what comes back is an empty `versions` array with the edition metadata
+moved to `available_versions`, which is why `read()` below treats `all` as a
+two-step request.
 
 What this module refuses to do
 ------------------------------
@@ -378,8 +386,9 @@ def read(
     `text_only`, because Sefaria's own default carries HTML footnote markup that
     lands in the middle of the Hebrew.
 
-    One thing worth knowing, because it is surprising and undocumented:
-    `version="all"` does **not** return every edition's text. It returns an
+    One thing worth knowing, because the OpenAPI document gets it wrong:
+    it describes `version="all"` as "get all texts in the required language",
+    and `version="all"` does **not** return every edition's text. It returns an
     empty `versions` list and fills `available_versions` with metadata instead,
     so asking for `all` naively gets you nothing at all. This function therefore
     treats `all` as a two-step request: ask what exists, then ask for each one by

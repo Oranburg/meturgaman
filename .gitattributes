@@ -1,0 +1,16 @@
+# The committed API contracts are evidence about a service rather than source
+# code, so git must not rewrite a byte of them.
+#
+# This machine has core.autocrlf=true, which rewrites line endings on checkout.
+# That is harmless for code and fatal for a document whose whole value is that
+# it is byte-identical to what the service published: `docs/api/README.md`
+# records a SHA-256 for each one so anyone can refetch and verify, and a hash
+# computed over a CRLF working copy matches neither the upstream file nor the
+# same checkout on Linux. It was already wrong once, quietly, before anyone
+# thought to check.
+#
+# `-text` turns every conversion off, so what is committed, what is checked out,
+# and what curl returns are the same bytes on every platform.
+
+docs/api/** -text
+desktop-skill/scripts/meturgaman/data/api/** -text

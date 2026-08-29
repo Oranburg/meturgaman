@@ -133,6 +133,33 @@ For terms of art, `python3 scripts/mtg.py word אסמכתא` gives dictionary en
 Give the senses, show a fetched example of each, and tell the reader how to
 recognize which sense is in front of them.
 
+## When the CLI does not have the shape you need
+
+Sefaria publishes about sixty endpoints and this tool wraps fifteen of them.
+Their full contract ships inside this skill, and there is a way to read it that
+does not cost the context window:
+
+```
+python3 scripts/api.py                        # every endpoint, one line each
+python3 scripts/api.py texts                  # every parameter of everything matching
+python3 scripts/api.py --responses api/ref/   # what comes back
+python3 scripts/api.py --docs passages        # where the prose about it lives
+```
+
+**Never `cat` the specs themselves.** `sefaria-openapi.json` is 1.2 MB and would
+swallow the window; `api.py` exists so that only the answer enters it. What it
+prints is what the service publishes about itself, not anyone's recollection.
+It works with no network at all, since the documents are bundled.
+
+`references/api-contracts.md` maps every command to the endpoint underneath it
+and says what the CLI adds, which is the reason to prefer the command even when
+the endpoint looks simple: the `is_ref` check that catches a fabricated citation,
+the two-step version fetch, the provider derivation that stops two editions from
+one digitization counting as two witnesses. Read it before calling anything by
+hand, and read `references/sefaria-api-traps.md` alongside it, because the spec
+records signatures and that file records behaviour. Where they disagree, the
+behaviour is what happens.
+
 ## Romanizing
 
 This works with no network at all, along with `detect`, `reverse`, `register`
@@ -239,5 +266,6 @@ substitute something weaker and let it pass.
 | `romanization-flags.md` | a flag fired and needs explaining |
 | `quoting-conventions.md` | the output is going into a manuscript |
 | `corpus-and-chains.md` | building a chain across the library |
-| `sefaria-api-traps.md` | the API returns something surprising |
+| `api-contracts.md` | the CLI does not have the shape you need, or an endpoint is being called by hand |
+| `sefaria-api-traps.md` | the API returns something the spec did not lead you to expect |
 | `calendar-and-hebcal.md` | anything about dates, readings or times |
