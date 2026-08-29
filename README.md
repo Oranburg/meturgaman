@@ -355,16 +355,36 @@ on HuggingFace under a permissive licence and run on your own machine. They
 publish no API contract, so this project does not call one.
 
 Both APIs' contracts are committed under `docs/api/`, so the code is written
-against a recorded spec rather than against anyone's memory of one.
+against a recorded spec rather than against anyone's memory of one: Sefaria's
+OpenAPI document with all sixty of its paths, Sefaria's index of the prose about
+them, and Hebcal's OpenAPI document, which `sources/hebcal.py` reads at import
+time to validate its own parameter names. Provenance and hashes are in
+[docs/api/README.md](docs/api/README.md).
 
-## The agent
+## The agent, and the skill, on five surfaces
 
-`agents/meturgaman.md` is the Claude Code subagent; `skills/meturgaman/SKILL.md`
-is the same capability as an Agent Skill for claude.ai and anywhere else
-skills run. Both are written around teaching from fetched sources, and both
-carry four disciplines that came out of the evaluation: no census without an
+The same capability, packaged for wherever Claude happens to be running. All of
+them are written around teaching from fetched sources, and all of them carry the
+four disciplines that came out of the evaluation: no census without an
 enumeration, no dressing a reading in the tool's authority, references copied
 exactly as fetched, and search snippets treated as leads rather than sources.
+
+| Where | What to use |
+|---|---|
+| Claude Code, workstation | `agents/meturgaman.md` and `skills/meturgaman/SKILL.md`, with the tool on the path |
+| Claude Code on the web | `.claude/agents/meturgaman.md`, which installs from the checkout and needs nothing else |
+| claude.ai | `claude-ai/`: build the zip, upload it, allow the sandbox three hosts. [claude-ai/INSTALL.md](claude-ai/INSTALL.md) |
+| Claude Cowork | the skill, plus `claude-ai/agents/cowork-instructions.md` as folder instructions |
+| Claude Desktop | `desktop-skill/`, the complete package the claude.ai build is an overlay on |
+
+Both packaged builds come out of `python tools/build_skill.py`, which vendors the
+library whole, standard library only and no install step, because a sandbox may
+have no package index in reach. They also
+carry both API contracts and a script that queries them, so a question about a
+parameter is answered from what the service publishes rather than from
+recollection, and answering it costs a few hundred tokens rather than the
+megabyte the spec occupies.
+
 The evidence for what the agent can and cannot do is in
 [notes/agent-evaluation.md](notes/agent-evaluation.md).
 
