@@ -73,6 +73,10 @@ the traps file where they disagree.
 python -m tools.fetch_contracts
 ```
 
+`python3` outside an activated virtual environment on macOS and Linux, where
+`python` is often absent; `python` on Windows, where `python3` is a Microsoft
+Store shortcut rather than an interpreter. Inside the venv, `python` everywhere.
+
 Verifies every file above against its recorded hash and fetches anything
 missing. Three other modes:
 

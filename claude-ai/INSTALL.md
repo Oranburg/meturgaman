@@ -20,12 +20,33 @@ python tools/build_skill.py --surface claude-ai
 Or `python tools/build_skill.py` with no argument to build the Claude Desktop
 package alongside it; they share almost everything and both get proven.
 
-`python`, not `python3`. This command runs on your own machine, and Windows has
-no `python3` on the path: it ships a `python3.exe` App Execution Alias that opens
-the Microsoft Store instead of an interpreter, so `python3` there fails with
-advice about the Store and nothing to do with this repository. On macOS and Linux
-either name works. The `python3` inside the skill's own pages is a different
-matter and correct as written, because that runs in a Linux container.
+### Which spelling of `python`
+
+There is no one spelling that works everywhere, which is worth stating plainly
+once rather than footnoting every command in this file.
+
+| | Windows | macOS and Linux |
+|---|---|---|
+| `python` | the interpreter | often absent; macOS 12.3 removed `/usr/bin/python`, and Debian and Ubuntu ship only `python3` unless `python-is-python3` is installed |
+| `python3` | **not an interpreter.** An App Execution Alias that opens the Microsoft Store, so it fails with advice about the Store and nothing about this repository | the interpreter |
+
+The way out is the virtual environment the README's Getting Started already
+creates. Activate it and `python` is right on every platform:
+
+```
+.venv\Scripts\Activate.ps1
+```
+
+```
+source .venv/bin/activate
+```
+
+Outside a venv, use `python` on Windows and `python3` on macOS and Linux.
+
+The `python3` inside the skill's own pages is a different matter and correct as
+written wherever it appears, because those commands run in a Linux container
+rather than on anyone's laptop. The same goes for the `&&` in them, and for
+`.venv/bin/`.
 
 It writes `dist/meturgaman-claude-ai-skill.zip`, about 366 KB. The script stages
 the tree, resolves the three symlinks under `meturgaman/data/` into real
