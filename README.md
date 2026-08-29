@@ -359,7 +359,8 @@ against a recorded spec rather than against anyone's memory of one: Sefaria's
 OpenAPI document with all sixty of its paths, Sefaria's index of the prose about
 them, and Hebcal's OpenAPI document, which `sources/hebcal.py` reads at import
 time to validate its own parameter names. Provenance and hashes are in
-[docs/api/README.md](docs/api/README.md).
+[docs/api/README.md](docs/api/README.md), and `python -m tools.fetch_contracts`
+verifies every one of them against the bytes the services serve.
 
 ## The agent, and the skill, on five surfaces
 

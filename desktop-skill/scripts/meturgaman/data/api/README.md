@@ -67,19 +67,31 @@ than anticipated.
 Read the spec for what to send, the traps file for what comes back, and believe
 the traps file where they disagree.
 
-## Refetching
+## Refetching, and checking what is here
 
 ```
-curl -sSL -o docs/api/sefaria-openapi.json \
-  https://raw.githubusercontent.com/Sefaria/Sefaria-Project/master/docs/openAPI.json
-curl -sSL -o docs/api/sefaria-llms.txt https://developers.sefaria.org/llms.txt
+python -m tools.fetch_contracts
 ```
 
-Then record the new byte count, SHA-256 and date in the table above, and run
-`python tools/build_skill.py --sync`, which copies the file into
-`desktop-skill/scripts/meturgaman/data/api/`. That is a real directory rather
-than a symlink, because a zip cannot carry one and LawOS builds its online skill
-set by copying it whole.
+Verifies every file above against its recorded hash and fetches anything
+missing. Three other modes:
+
+| | |
+|---|---|
+| `--check` | verify what is on disk and touch the network not at all |
+| `--upstream` | fetch each one and report whether the publisher has revised it, writing nothing |
+| `--refresh` | take the current upstream copy, and print the byte count and hash to paste into the table above |
+
+It writes both copies, here and in `desktop-skill/scripts/meturgaman/data/api/`,
+which is a real directory rather than a symlink because a zip cannot carry one
+and LawOS builds its online skill set by copying it whole. After a `--refresh`,
+run `python tools/build_skill.py --sync` and rebuild.
+
+This used to be two lines of prose telling the reader to run `curl`, and that
+prose was wrong on Windows twice over: the backslash line continuation is bash,
+and `curl` in PowerShell 5.1 is an alias for `Invoke-WebRequest`, whose arguments
+are nothing like curl's. It also asked for the byte count and hash to be recorded
+by hand, which is how the wrong ones got here.
 
 `sefaria-llms.txt` drifts: it is a living index of a documentation site, and
 upstream had already moved on from the copy here by 2026-08-29. The hash above is
