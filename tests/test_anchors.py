@@ -8,6 +8,10 @@ answer is known in advance.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+import pytest
+
 from meturgaman.sources.sefaria import shape_summary
 
 
@@ -52,3 +56,25 @@ def test_a_dict_payload_is_treated_as_one_record():
     works = shape_summary({"title": "Solo", "chapters": [3]})
     assert len(works) == 1
     assert works[0].title == "Solo"
+
+
+def test_an_unknown_title_is_refused_rather_than_counted_as_empty(monkeypatch):
+    """The service says "no such work" with an HTTP 200 and an error document.
+
+    Read as a shape record that document has no chapters, so it summarized to
+    a work of zero anchors and a mistyped title reported as an empty work.
+    `anchors` exists to make a census checkable, so the one thing it may not
+    do is answer a question about a work nobody has with a confident zero.
+    """
+    from meturgaman.sources import sefaria
+
+    monkeypatch.setattr(
+        sefaria, "_get",
+        lambda path, params=None, **kwargs: SimpleNamespace(
+            payload={"error": "No index or category found to match Not A Real Work"}
+        ),
+    )
+    with pytest.raises(LookupError) as refused:
+        sefaria.shape("Not A Real Work")
+    assert "Not A Real Work" in str(refused.value)
+    assert "No index or category" in str(refused.value)
