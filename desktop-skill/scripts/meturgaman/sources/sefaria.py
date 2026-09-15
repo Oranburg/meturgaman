@@ -656,7 +656,13 @@ def name_candidates(text: str, *, limit: int = 10) -> list[dict[str, Any]]:
     good but not authoritative: `Hilchot Deot` comes back with
     `Mishneh Torah, Repentance` first.
     """
-    text = _required(text, "name")
+    # "search text" rather than "name": this is reached from the MCP `topics`
+    # tool, whose parameter is `query`, and from `meturgaman candidates`, whose
+    # argument is `name`. Naming one of them tells the other's caller to go
+    # looking for a field it does not have -- and a small model repairing a
+    # blank `query` by trying a `name` field gets a validation error back and
+    # loops. The message names the kind of value, which is true for both.
+    text = _required(text, "search text")
     payload = _get(f"/name/{text}", {"limit": limit}).payload
     if not isinstance(payload, dict):
         return []
