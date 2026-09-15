@@ -320,7 +320,12 @@ meturgaman-mcp
 ```
 
 Thirteen tools over stdio, structured results, flags inside the payload. The
-SDK stays behind the extra so the core keeps its zero dependencies.
+SDK stays behind the extra so the core keeps its zero dependencies. A refusal
+travels as a refusal: a mistyped date, an unresolvable citation and an
+unreachable service come back with the reason and the candidates, on the same
+rule the command line refuses on, so a client can report the finding instead
+of guessing. Hebrew survives whatever the machine's code page is, in both
+directions.
 
 ## Hearing it, and the calendar
 
