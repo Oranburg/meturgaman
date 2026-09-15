@@ -284,6 +284,25 @@ def test_academic_is_more_reversible_than_general():
     assert len(academic.ambiguities) <= len(general.ambiguities)
 
 
+def test_nothing_reversible_returns_nothing_rather_than_blank_candidates():
+    """An empty reconstruction is an absence, not a spelling.
+
+    Empty input came back as one candidate per scheme, each with `letters`
+    empty and no ambiguity recorded, so `is_certain` was True on all of them.
+    Eight schemes reporting a certain answer of nothing is the worst available
+    way to say there is nothing to say.
+    """
+    for nothing in ("", "   ", "123"):
+        assert reverse.reverse(nothing) == []
+        assert reverse.reverse(nothing, "sbl-general") == []
+    # A partial reconstruction is still an answer, and keeps saying what it
+    # could not place.
+    (partial,) = reverse.reverse("xyz", "sbl-general")
+    assert hebrew.has_hebrew(partial.letters)
+    assert any("matches nothing" in note for note in partial.ambiguities)
+    assert reverse.reverse("shalom", "sbl-general")[0].letters
+
+
 # ---------------------------------------------------------------------------
 # Register
 # ---------------------------------------------------------------------------

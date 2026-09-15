@@ -175,10 +175,23 @@ def reverse(text: str, scheme: str | Scheme | None = None) -> list[Candidate]:
 
     if scheme is not None:
         chosen = scheme if isinstance(scheme, Scheme) else scheme_named(scheme)
-        return [_reverse_one(text, chosen)]
+        return [
+            candidate
+            for candidate in [_reverse_one(text, chosen)]
+            if hebrew.has_hebrew(candidate.letters)
+        ]
 
+    # A reconstruction that recovered no letter is not a spelling, it is an
+    # absence. Empty input used to come back as eight candidates whose
+    # `letters` was "" and whose `is_certain` was True, which reads as eight
+    # schemes agreeing rather than as nothing to say -- and a caller checking
+    # `is_certain` on the first of them was told the answer was sure.
     candidates = [
-        _reverse_one(text, available) for available in all_schemes().values()
+        candidate
+        for candidate in (
+            _reverse_one(text, available) for available in all_schemes().values()
+        )
+        if hebrew.has_hebrew(candidate.letters)
     ]
     candidates.sort(key=lambda candidate: (len(candidate.ambiguities), candidate.scheme))
     return candidates

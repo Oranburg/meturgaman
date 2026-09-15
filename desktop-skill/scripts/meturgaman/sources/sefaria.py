@@ -243,6 +243,22 @@ class LexiconEntry:
     senses: tuple[str, ...] = ()
 
 
+def _required(value: str, what: str) -> str:
+    """A path argument that may not be empty.
+
+    An empty one builds a URL ending in its own slash, and Sefaria answers
+    that with a 404 whose body is a web page. The first 300 characters of
+    that page then travelled into the refusal message, so `meturgaman word ""`
+    reported a fragment of HTML as its reason -- and under the MCP server the
+    same fragment is what a model would be handed to explain itself with.
+    Refusing here costs no request and says the useful thing.
+    """
+    text = value.strip()
+    if not text:
+        raise ValueError(f"no {what} given")
+    return text
+
+
 def _get(path: str, params: dict[str, Any] | None = None, **kwargs: Any) -> Fetched:
     # Percent-encode the path. Several endpoints take Hebrew in the URL, such as
     # `/api/words/צדקה`, and an unencoded one raises inside http.client rather
@@ -640,6 +656,7 @@ def name_candidates(text: str, *, limit: int = 10) -> list[dict[str, Any]]:
     good but not authoritative: `Hilchot Deot` comes back with
     `Mishneh Torah, Repentance` first.
     """
+    text = _required(text, "name")
     payload = _get(f"/name/{text}", {"limit": limit}).payload
     if not isinstance(payload, dict):
         return []
@@ -797,6 +814,7 @@ def topics(*, limit: int = 0) -> list[Topic]:
 
 def topic(slug: str) -> Topic:
     """One topic's metadata."""
+    slug = _required(slug, "topic slug")
     payload = _get(f"/v2/topics/{slug}").payload
     if not isinstance(payload, dict) or payload.get("error") or not payload:
         # An unknown slug comes back as `{}`, which is a dict and carries no
@@ -823,6 +841,7 @@ def topic_sources(slug: str, *, limit: int = 20) -> list[str]:
     list rather than a search result, which makes it a much better starting point
     than full-text search for a subject anyone has thought about before.
     """
+    slug = _required(slug, "topic slug")
     payload = _get(f"/v2/topics/{slug}", {"with_refs": 1}).payload
     if not isinstance(payload, dict):
         return []
@@ -868,6 +887,7 @@ def search_topics(query: str, *, limit: int = 10) -> list[Topic]:
 
 def lookup_word(word: str, *, lookup_ref: str = "") -> list[LexiconEntry]:
     """Dictionary entries for a Hebrew or Aramaic word."""
+    word = _required(word, "word")
     params = {"lookup_ref": lookup_ref} if lookup_ref else None
     payload = _get(f"/words/{word}", params).payload
     rows = payload if isinstance(payload, list) else []
@@ -914,6 +934,7 @@ def calendars(*, date: str = "", diaspora: bool = True) -> dict[str, Any]:
 
 def shape(title: str) -> Any:
     """The shape of a work: how many chapters, how many verses in each."""
+    title = _required(title, "work title")
     payload = _get(f"/shape/{title.replace(' ', '_')}").payload
     if isinstance(payload, dict) and payload.get("error"):
         # An unknown title comes back as an error document with HTTP 200, not
@@ -996,4 +1017,5 @@ def shape_summary(payload: Any) -> list[WorkShape]:
 
 def index_metadata(title: str) -> Any:
     """A work's record: categories, structure, authors, description."""
+    title = _required(title, "work title")
     return _get(f"/v2/index/{title.replace(' ', '_')}").payload

@@ -61,3 +61,30 @@ def test_a_network_error_on_one_source_does_not_abort_the_rest(
     # the item that follows it.
     assert "Sheet 409392" in captured.out
     assert "HTTP 400" in captured.out
+
+
+def test_an_empty_path_argument_is_refused_before_any_request(monkeypatch):
+    """A blank argument used to be sent, and came back as a web page.
+
+    `/api/words/` with nothing after it is a 404 whose body is HTML, and the
+    first 300 characters of that page became the refusal's stated reason. The
+    MCP server hands a tool's message to a model, so that fragment is what the
+    model would have had to explain itself with. None of these should reach
+    the network at all.
+    """
+    def refuse(*args, **kwargs):
+        raise AssertionError("a request left the machine for an empty argument")
+
+    monkeypatch.setattr(sefaria, "_get", refuse)
+
+    for call in (
+        lambda: sefaria.lookup_word("  "),
+        lambda: sefaria.shape(""),
+        lambda: sefaria.index_metadata(""),
+        lambda: sefaria.name_candidates(""),
+        lambda: sefaria.topic(""),
+        lambda: sefaria.topic_sources("   "),
+    ):
+        with pytest.raises(ValueError) as refused:
+            call()
+        assert "no " in str(refused.value)

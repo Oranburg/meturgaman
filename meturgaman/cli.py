@@ -463,6 +463,15 @@ def _reverse(arguments) -> int:
     candidates = reverse.reverse(arguments.text, arguments.scheme)[: arguments.limit]
     if arguments.json:
         return _emit_json({"candidates": candidates})
+    if not candidates:
+        # Said rather than printed as blank rows. No scheme recovered a letter,
+        # which is the answer for an empty string and for a run of digits.
+        print(
+            "No Hebrew could be reconstructed: nothing here is a romanization "
+            "any scheme produces.",
+            file=sys.stderr,
+        )
+        return 1
     for candidate in candidates:
         print(f"{candidate.letters:20} {candidate.scheme}")
         for note in candidate.ambiguities:
