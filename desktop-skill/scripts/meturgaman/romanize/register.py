@@ -49,7 +49,6 @@ class RegisterConflict(Exception):
 # Whole words score higher than spelling habits, because a word like `Shabbos`
 # can only be Ashkenazi while a `ch` can be an accident of someone's keyboard.
 _MARKERS: tuple[tuple[str, str, int, str], ...] = (
-    (r"\b\w*[oa]s\b(?<!\bas\b)(?<!\bis\b)(?<!\bus\b)", ASHKENAZI, 0, "unused placeholder"),
     (r"\bShabbos\b", ASHKENAZI, 3, "tav read as s"),
     (r"\bShabbes\b", ASHKENAZI, 3, "tav read as s"),
     (r"\bAkeidas\b", ASHKENAZI, 3, "tav read as s"),
@@ -73,10 +72,15 @@ _MARKERS: tuple[tuple[str, str, int, str], ...] = (
     (r"[ḥṭṣẓḳ]", SEPHARDI, 1, "underdotted consonants, an academic Sephardi habit"),
 )
 
-_ASHKENAZI_SUFFIX = re.compile(
-    r"\b(?:[A-Za-z]{2,})(?:os|us)\b"
-)
+# The plural ending, which is `־ות` read two ways. `-os` only: `-us` is a
+# minority Hungarian and Hasidic variant, and it is also the ending of a large
+# part of ordinary English and Latin vocabulary, so counting it turned
+# `status`, `previous`, `various` and `obvious` into evidence about Hebrew.
+_ASHKENAZI_SUFFIX = re.compile(r"\b(?:[A-Za-z]{2,})os\b")
 _SEPHARDI_SUFFIX = re.compile(r"\b(?:[A-Za-z]{2,})ot\b")
+
+#: Any Hebrew letter, for the corroboration test in `detect_register`.
+_HEBREW = re.compile(r"[א-ת]")
 
 
 @dataclass
@@ -118,8 +122,6 @@ def detect_register(text: str) -> Register:
     evidence: list[str] = []
 
     for pattern, register, weight, description in _MARKERS:
-        if weight == 0:
-            continue
         found = re.findall(pattern, text, re.IGNORECASE)
         if not found:
             continue
@@ -132,12 +134,28 @@ def detect_register(text: str) -> Register:
             f"{len(found):>3} x {description} ({register}, +{points})"
         )
 
-    # Plural endings, counted together rather than word by word.
-    os_endings = len(_ASHKENAZI_SUFFIX.findall(text))
-    ot_endings = len(_SEPHARDI_SUFFIX.findall(text))
+    # Plural endings, counted together rather than word by word, and only in a
+    # text that has already shown itself to be about Hebrew.
+    #
+    # A plural ending corroborates; it does not initiate. `photos`, `kudos` and
+    # `logos` are English, and on their own they say nothing about a register.
+    # Ungated, this rule read a paragraph of legal prose carrying a single
+    # Hebrew word as Ashkenazi with "clear" confidence, and the guard below
+    # then refused to romanize it, telling the author in detail that his own
+    # usage was something it was not.
+    #
+    # The cost is stated rather than hidden. A text whose only evidence is
+    # plurals this module has no marker for -- `the sedros and the brochos` --
+    # now comes back undetermined instead of Ashkenazi, so the guard does not
+    # fire on it. That is the safer of the two errors: failing to notice a
+    # register leaves the text alone, while inventing one refuses honest work
+    # and gives a false reason for the refusal.
+    corroborated = bool(evidence) or bool(_HEBREW.search(text))
+    os_endings = len(_ASHKENAZI_SUFFIX.findall(text)) if corroborated else 0
+    ot_endings = len(_SEPHARDI_SUFFIX.findall(text)) if corroborated else 0
     if os_endings:
         ashkenazi += os_endings
-        evidence.append(f"{os_endings:>3} x plural in -os or -us (ashkenazi, +{os_endings})")
+        evidence.append(f"{os_endings:>3} x plural in -os (ashkenazi, +{os_endings})")
     if ot_endings:
         sephardi += ot_endings
         evidence.append(f"{ot_endings:>3} x plural in -ot (sephardi, +{ot_endings})")

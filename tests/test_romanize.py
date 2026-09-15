@@ -326,6 +326,34 @@ def test_the_guard_does_not_fire_on_neutral_text():
     register.preserve_guard("shalom", "sbl-general")
 
 
+def test_ordinary_english_is_not_a_register():
+    """`-us` and `-os` are most of the Latin vocabulary English inherited.
+
+    The plural rule counted every word ending in either, so a paragraph of
+    legal prose scored Ashkenazi 8 to 0 with "clear" confidence, and the guard
+    refused to romanize a document whose only Hebrew was one quoted word. The
+    refusal even printed the count as its reason, which was a true number
+    about a false thing.
+    """
+    prose = (
+        "The previous consensus about the status of various obvious claims "
+        "is serious, and the campus bonus is unanimous."
+    )
+    assert register.detect_register(prose).register == register.UNDETERMINED
+    register.preserve_guard(prose, "sbl-general")
+    # And with a Hebrew word in it, which is what the tool is usually pointed at.
+    with_hebrew = prose + " The Mishnah's term is מוּעָד."
+    assert register.detect_register(with_hebrew).register == register.UNDETERMINED
+    register.preserve_guard(with_hebrew, "sbl-general")
+
+
+def test_a_plural_still_counts_once_the_text_shows_its_register():
+    """Corroborating, not initiating: `brochos` counts next to `Shabbos`."""
+    found = register.detect_register("On Shabbos we say the brochos and the sedros")
+    assert found.register == register.ASHKENAZI
+    assert any("plural in -os" in item for item in found.evidence)
+
+
 # ---------------------------------------------------------------------------
 # Clustering and flags
 # ---------------------------------------------------------------------------
