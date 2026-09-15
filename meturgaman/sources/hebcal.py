@@ -101,6 +101,25 @@ def parameters_for(path: str, method: str = "get") -> dict[str, dict[str, Any]]:
     return found
 
 
+def _as_date(value: Any, what: str = "date") -> date:
+    """Parse a YYYY-MM-DD string, naming the expected form when it is not one.
+
+    `date.fromisoformat` raises "Invalid isoformat string: 'not-a-date'",
+    which tells a reader what the parser is called rather than what the
+    argument should look like. `sefaria.calendars` already wraps its own parse
+    for that reason; these five did not, so the same mistake got a useful
+    refusal from one command and a bare parser message from another.
+    """
+    if not isinstance(value, str):
+        return value
+    try:
+        return date.fromisoformat(value)
+    except ValueError as error:
+        raise ValueError(
+            f"{value!r} is not a {what} in YYYY-MM-DD form: {error}"
+        ) from error
+
+
 def _validate(path: str, params: dict[str, Any]) -> dict[str, Any]:
     """Drop nothing, but refuse a value the spec says is not allowed."""
     known = parameters_for(path)
@@ -261,7 +280,7 @@ def convert(
 
     `to_gregorian` goes the other way.
     """
-    when = date.fromisoformat(when) if isinstance(when, str) else when
+    when = _as_date(when)
     params = _validate(
         "/converter",
         {
@@ -295,7 +314,7 @@ def leyning(
     triennial: bool = True,
 ) -> Reading | None:
     """The Torah reading for a date, with its aliyot and haftarah."""
-    when = date.fromisoformat(when) if isinstance(when, str) else when
+    when = _as_date(when)
     params = _validate(
         "/leyning",
         {
@@ -345,7 +364,7 @@ def zmanim(
     A location is required and there is no sensible default, so this raises
     rather than quietly answering for somewhere else.
     """
-    when = date.fromisoformat(when) if isinstance(when, str) else when
+    when = _as_date(when)
     if geonameid is None and not zip_code and (
         latitude is None or longitude is None or not tzid
     ):
@@ -380,9 +399,7 @@ def yahrzeit(
     name: str = "",
 ) -> list[dict[str, Any]]:
     """Yahrzeit dates for the coming years."""
-    death_date = (
-        date.fromisoformat(death_date) if isinstance(death_date, str) else death_date
-    )
+    death_date = _as_date(death_date, "death date")
     # The service wants its short names: y1, m1, d1, s1, t1, n1. The long
     # spellings (year1, month1...) are silently ignored and the reply is an
     # empty item list that looks like "no yahrzeits", which is how this
@@ -422,7 +439,7 @@ def read_day(
     keep the names in register too.
     """
     when = date.today() if when is None else when
-    when = date.fromisoformat(when) if isinstance(when, str) else when
+    when = _as_date(when)
 
     if locale not in LOCALES:
         raise ValueError(
