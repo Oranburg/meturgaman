@@ -367,6 +367,40 @@ def test_the_qamats_qatan_list_stays_short():
     assert hebrew.consonantal_skeleton("כָּל") in words
 
 
+def test_the_qamats_qatan_list_is_found_the_way_an_install_lays_it_out(
+    tmp_path, monkeypatch
+):
+    """The list has to come through `rules_directory`, not a walk for `rules/`.
+
+    A checkout keeps these files in a top-level `rules/`; a pip-installed
+    package carries them at `meturgaman/data/rules/`. This function once looked
+    only for the first shape, so an install found nothing and every word in the
+    list was read with a long qamats -- silently, because an empty list is a
+    legitimate state, so nothing raised and `ḥokhmah` came out `ḥakhemah`.
+    Relocating the directory is what an install does to it, so the test does
+    that rather than trusting the layout it happens to be run from.
+    """
+    from meturgaman.romanize import rules
+
+    monkeypatch.setattr(rules, "rules_directory", lambda: tmp_path)
+    # The tables are cached by filename, and this one is already loaded from
+    # the checkout by the tests above.
+    monkeypatch.setattr(rules, "_RULE_TABLES", {})
+    (tmp_path / "qamats-qatan.md").write_text(
+        "\n".join([
+            "| Word | Reading | Why |",
+            "|---|---|---|",
+            "| חָכְמָה | ḥokhmah | listed |",
+        ]),
+        encoding="utf-8",
+    )
+
+    assert rules.qamats_qatan_words() == {hebrew.consonantal_skeleton("חָכְמָה")}
+    # And the classification follows the relocated file, rather than the engine
+    # having quietly kept a copy of its own.
+    assert romanize("חָכְמָה").text == "ḥokhmah"
+
+
 # ---------------------------------------------------------------------------
 # Yiddish
 # ---------------------------------------------------------------------------

@@ -203,9 +203,6 @@ def established_forms() -> dict[str, str]:
     return load_rule_table("established-forms.md")
 
 
-_QAMATS_QATAN_WORDS: frozenset[str] | None = None
-
-
 def qamats_qatan_words() -> frozenset[str]:
     """Consonantal skeletons whose qamats is short as a matter of the lexicon.
 
@@ -217,33 +214,17 @@ def qamats_qatan_words() -> frozenset[str]:
     This is emphatically not a glossary of transliterations. It answers exactly
     one classification question for a handful of words where the orthographic
     rule provably cannot, and it is checked by a test that keeps it short.
+
+    Goes through `load_rule_table`, and so through `rules_directory`, like the
+    other two rule files. It once walked up from this file looking only for a
+    `rules/` directory, which is a checkout's layout and not an install's: a
+    pip-installed package carries the file at `meturgaman/data/rules/`, the
+    walk never looked there, and the list came back empty. Nothing raised,
+    because an absent list is a legitimate state, so every word here was read
+    with a long qamats instead. The qamats pass feeds the sheva pass, so the
+    vowel and the syllable went together: `chokhmah` came out `chakhemah`.
     """
-    global _QAMATS_QATAN_WORDS
-    if _QAMATS_QATAN_WORDS is not None:
-        return _QAMATS_QATAN_WORDS
-
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        candidate = parent / "rules" / "qamats-qatan.md"
-        if candidate.exists():
-            words: set[str] = set()
-            for line in candidate.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line.startswith("|") or line.startswith("|---"):
-                    continue
-                cells = [cell.strip() for cell in line.strip("|").split("|")]
-                if not cells or cells[0].lower() in ("word", "form"):
-                    continue
-                skeleton = hebrew.consonantal_skeleton(cells[0])
-                if skeleton:
-                    words.add(skeleton)
-            _QAMATS_QATAN_WORDS = frozenset(words)
-            return _QAMATS_QATAN_WORDS
-
-    # Absent file means absent exceptions, not a crash. The rule below still
-    # handles every word whose shape settles the question.
-    _QAMATS_QATAN_WORDS = frozenset()
-    return _QAMATS_QATAN_WORDS
+    return frozenset(load_rule_table("qamats-qatan.md"))
 
 
 # ---------------------------------------------------------------------------
