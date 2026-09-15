@@ -914,7 +914,16 @@ def calendars(*, date: str = "", diaspora: bool = True) -> dict[str, Any]:
 
 def shape(title: str) -> Any:
     """The shape of a work: how many chapters, how many verses in each."""
-    return _get(f"/shape/{title.replace(' ', '_')}").payload
+    payload = _get(f"/shape/{title.replace(' ', '_')}").payload
+    if isinstance(payload, dict) and payload.get("error"):
+        # An unknown title comes back as an error document with HTTP 200, not
+        # as a failure. Summarized, that document held no `chapters`, so it
+        # reduced to a work of zero chapters and no anchors, and both front
+        # ends reported a mistyped title as a work that exists and is empty.
+        # `anchors` is the command run before a sentence that counts; a
+        # confident zero is the one answer it must never invent.
+        raise LookupError(f"{title!r}: {payload['error']}")
+    return payload
 
 
 @dataclass(frozen=True)

@@ -290,6 +290,7 @@ substitute something weaker and let it pass.
 | `sandbox-on-claude-ai.md` | the probe reported a blocked host, or a file has to change hands |
 | `api-contracts.md` | the CLI does not have the shape you need, or an endpoint is being called by hand |
 | `sefaria-api-traps.md` | the API returns something the spec did not lead you to expect |
+| `citation-form.md` | a fetched passage is going into a footnote or a bibliographic record |
 | `capability-map.md` | a request may be for something unavailable here |
 | `sefaria-fallback.md` | the probe says Sefaria is blocked |
 | `integrity-on-the-fallback.md` | any passage is fetched by web fetch |

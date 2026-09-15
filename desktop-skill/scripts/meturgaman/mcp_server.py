@@ -24,10 +24,12 @@ calls the same fetching, validating library the CLI calls.
 from __future__ import annotations
 
 import dataclasses
+import functools
 import sys
 from typing import Any, Literal
 
-from meturgaman.scheme import all_schemes
+from meturgaman.net import NetworkError
+from meturgaman.scheme import SchemeError, all_schemes
 
 __all__ = ["build_server", "main"]
 
@@ -61,6 +63,7 @@ def _plain(value: Any) -> Any:
 def build_server():
     """Construct the server. Raises ImportError when the SDK is missing."""
     from mcp.server import MCPServer
+    from mcp.server.mcpserver.exceptions import ToolError
     from mcp.types import ToolAnnotations
 
     from meturgaman import __version__
@@ -82,10 +85,48 @@ def build_server():
         ),
     )
 
-    @server.tool(description=(
+    def tool(**options):
+        """Register a tool: read-only, and refusing rather than crashing.
+
+        Both marks are structural rather than repeated at each definition, so
+        a fourteenth tool cannot be added without them.
+        """
+        register = server.tool(annotations=read_only, **options)
+        return lambda function: register(_refusing(function))
+
+    def _refusing(function):
+        """Turn an anticipated failure into a message the model can read.
+
+        The SDK shows the model a tool's message only for `ToolError`;
+        anything else is a crash, and all it gets back is "Error executing
+        tool <name>". A mistyped date, an unresolvable citation and an
+        unreachable service are not crashes, and a client that is told only
+        that something failed cannot do what this server's own instructions
+        ask of it: report the finding and offer the candidates. The
+        anticipated set is the one `cli.main` already refuses on, so the two
+        front ends agree about which failures are the caller's to fix.
+        """
+        @functools.wraps(function)
+        def guarded(*arguments, **keywords):
+            try:
+                return function(*arguments, **keywords)
+            except (SchemeError, NetworkError, ValueError, RuntimeError,
+                    OSError, OverflowError) as error:
+                raise ToolError(str(error)) from error
+            except LookupError as error:
+                # As in the CLI: LookupError is the base of KeyError and
+                # IndexError, so an internal fault would otherwise be
+                # reported to the model as though the caller had mistyped.
+                if type(error) in (KeyError, IndexError):
+                    raise
+                raise ToolError(str(error)) from error
+
+        return guarded
+
+    @tool(description=(
         "Fetch a passage in its editions, with segment anchors, licences, "
         "and provenance. The only way to quote a text."
-    ), annotations=read_only)
+    ))
     def text(citation: str, version: str = "", full: bool = True) -> dict:
         from meturgaman.sources import sefaria
 
@@ -108,20 +149,20 @@ def build_server():
             "attribution": reading.attribution,
         })
 
-    @server.tool(description=(
+    @tool(description=(
         "Everything the tradition built on a passage, in transmission order: "
         "Tanakh through Mishnah, Talmud, commentary, codes, responsa."
-    ), annotations=read_only)
+    ))
     def chain(citation: str) -> dict:
         from meturgaman.chain import chain as build_chain
 
         normalized, groups = build_chain(citation)
         return _plain({"ref": normalized, "chain": groups})
 
-    @server.tool(description=(
+    @tool(description=(
         "Raw link records for a passage, optionally filtered by Sefaria "
         "category such as Commentary or Halakhah."
-    ), annotations=read_only)
+    ))
     def links(citation: str, category: str = "") -> dict:
         from meturgaman.sources import sefaria
 
@@ -129,11 +170,11 @@ def build_server():
         found = sefaria.links(ref, categories=[category] if category else None)
         return _plain({"ref": ref.normalized, "links": found})
 
-    @server.tool(description=(
+    @tool(description=(
         "Romanize Hebrew under a published standard. Flags travel in the "
         "result and mark decisions the orthography cannot settle. Leave "
         "scheme blank for sbl-general, the default."
-    ), annotations=read_only)
+    ))
     def romanize(text: str, scheme: SchemeName = "") -> dict:
         from meturgaman.romanize.engine import romanize as run
 
@@ -144,21 +185,21 @@ def build_server():
             "flags": [str(flag) for flag in result.flags],
         }
 
-    @server.tool(description=(
+    @tool(description=(
         "Which romanization standard a Latin-script text already uses, with "
         "the evidence for and against each candidate."
-    ), annotations=read_only)
+    ))
     def detect(text: str) -> dict:
         from meturgaman.romanize import detect as detector
 
         return _plain({"guesses": detector.detect(text)})
 
-    @server.tool(description=(
+    @tool(description=(
         "Check a draft: every citation validated against Sefaria, every "
         "Hebrew quotation of three or more words checked against the "
         "passages cited in its paragraph, with the first diverging word "
         "named when a quotation fails."
-    ), annotations=read_only)
+    ))
     def verify_draft(text: str) -> dict:
         from meturgaman.verify import verify as run
 
@@ -169,10 +210,10 @@ def build_server():
             "quotations": report.quotations,
         })
 
-    @server.tool(description=(
+    @tool(description=(
         "Every populated anchor of a work with its segment count, from the "
         "service's shape record. Run before any sentence that counts."
-    ), annotations=read_only)
+    ))
     def anchors(title: str) -> dict:
         from meturgaman.sources import sefaria
 
@@ -180,18 +221,17 @@ def build_server():
             "works": sefaria.shape_summary(sefaria.shape(title))
         })
 
-    @server.tool(description=(
+    @tool(description=(
         "Find a subject in Sefaria's curated topic ontology; better than "
         "search for anything anyone has thought about before."
-    ), annotations=read_only)
+    ))
     def topics(query: str, limit: int = 10) -> dict:
         from meturgaman.sources import sefaria
 
         return _plain({"topics": sefaria.search_topics(query, limit=limit)})
 
-    @server.tool(
+    @tool(
         description="The curated source references for a topic slug.",
-        annotations=read_only,
     )
     def topic_sources(slug: str, limit: int = 10) -> dict:
         from meturgaman.sources import sefaria
@@ -201,30 +241,29 @@ def build_server():
             "sources": sefaria.topic_sources(slug, limit=limit),
         })
 
-    @server.tool(
+    @tool(
         description="Full-text search of the library, for when no topic fits.",
-        annotations=read_only,
     )
     def search(query: str, limit: int = 10) -> dict:
         from meturgaman.sources import sefaria
 
         return _plain({"hits": sefaria.search(query, limit=limit)})
 
-    @server.tool(description=(
+    @tool(description=(
         "Dictionary entries for a Hebrew or Aramaic word, with Jastrow's "
         "citations back into the corpus."
-    ), annotations=read_only)
+    ))
     def word(term: str) -> dict:
         from meturgaman.sources import sefaria
 
         return _plain({"entries": sefaria.lookup_word(term)})
 
-    @server.tool(description=(
+    @tool(description=(
         "The mapped passage boundary containing a Talmud reference. A page "
         "is a physical unit; the argument regularly crosses it. Returns "
         "null when nothing is mapped, including for references (most "
         "non-Talmud texts) this concept does not apply to."
-    ), annotations=read_only)
+    ))
     def sugya(citation: str) -> dict:
         from meturgaman.sources import sefaria
 
@@ -237,10 +276,10 @@ def build_server():
             found = None
         return {"ref": citation, "passage": found}
 
-    @server.tool(description=(
+    @tool(description=(
         "The daily learning calendar: parashah, daf yomi, and the other "
         "cycles, each with a fetchable reference."
-    ), annotations=read_only)
+    ))
     def calendars(date: str = "", israel: bool = False) -> dict:
         from meturgaman.sources import sefaria
 

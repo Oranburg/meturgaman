@@ -268,4 +268,5 @@ substitute something weaker and let it pass.
 | `corpus-and-chains.md` | building a chain across the library |
 | `api-contracts.md` | the CLI does not have the shape you need, or an endpoint is being called by hand |
 | `sefaria-api-traps.md` | the API returns something the spec did not lead you to expect |
+| `citation-form.md` | a fetched passage is going into a footnote or a bibliographic record |
 | `calendar-and-hebcal.md` | anything about dates, readings or times |

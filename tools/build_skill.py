@@ -311,17 +311,34 @@ def pack(staged: pathlib.Path, output: pathlib.Path) -> None:
                 archive.write(path, str(arcname))
 
 
+# Each case is argv, a label, and what the output must contain -- empty when
+# running without a traceback is the whole of the claim.
+#
+# The expectation is not decoration. This is the only pass that runs the code
+# in the shape it ships in, extracted from the zip with a cold HOME and an
+# empty PYTHONPATH, and the failure this project fears is not a crash: it is a
+# plausible word that is wrong. `ḥokhmah` is here because its qamats is short
+# as a matter of the lexicon rather than of the spelling, so it is only right
+# when `rules/qamats-qatan.md` was actually found inside the archive. Read
+# from a checkout it was right for years while the shipped skill said
+# `ḥakhemah`, because the lookup walked up out of the package and into the
+# repository that happened to be above it.
 CASES = (
-    (["scripts/probe.py"], "probe"),
-    (["scripts/mtg.py", "romanize", "כָּל־הָאָרֶץ"], "romanize (offline)"),
-    (["scripts/mtg.py", "detect", "Shabbos and halachah"], "detect (offline)"),
-    (["scripts/mtg.py", "law", "tiers"], "law tiers (offline)"),
-    (["scripts/api.py", "--index"], "api index (offline)"),
-    (["scripts/api.py", "api/v3/texts"], "api parameters (offline)"),
-    (["scripts/api.py", "--responses", "api/ref/"], "api responses (offline)"),
-    (["scripts/api.py", "--docs", "passages"], "api docs index (offline)"),
-    (["scripts/mtg.py", "text", "Genesis 1:1"], "text (live)"),
-    (["scripts/mtg.py", "topics", "charity"], "topics (live)"),
+    (["scripts/probe.py"], "probe", ""),
+    (["scripts/mtg.py", "romanize", "כָּל־הָאָרֶץ"], "romanize (offline)",
+     "kol-ha-’arets"),
+    (["scripts/mtg.py", "romanize", "חָכְמָה"], "romanize lexical (offline)",
+     "ḥokhmah"),
+    (["scripts/mtg.py", "detect", "Shabbos and halachah"], "detect (offline)",
+     "encyclopaedia-judaica-general"),
+    (["scripts/mtg.py", "law", "tiers"], "law tiers (offline)", "enacted"),
+    (["scripts/api.py", "--index"], "api index (offline)", "sefaria"),
+    (["scripts/api.py", "api/v3/texts"], "api parameters (offline)", "sefaria"),
+    (["scripts/api.py", "--responses", "api/ref/"], "api responses (offline)",
+     "sefaria"),
+    (["scripts/api.py", "--docs", "passages"], "api docs index (offline)", ""),
+    (["scripts/mtg.py", "text", "Genesis 1:1"], "text (live)", "Genesis 1:1"),
+    (["scripts/mtg.py", "topics", "charity"], "topics (live)", "tzedakah"),
 )
 
 
@@ -348,8 +365,8 @@ def prove(archive: pathlib.Path) -> int:
     env["PYTHONPATH"] = ""
     env["PYTHONIOENCODING"] = "utf-8"
 
-    crashes = 0
-    for argv, label in CASES:
+    failures = 0
+    for argv, label, expected in CASES:
         result = subprocess.run(
             [sys.executable, *argv],
             cwd=skill,
@@ -363,15 +380,20 @@ def prove(archive: pathlib.Path) -> int:
         out = (result.stdout or "").strip()
         err = (result.stderr or "").strip()
         crashed = "Traceback" in err
-        crashes += crashed
+        # Flags go to stderr, so an expectation may legitimately land there.
+        wrong = bool(expected) and not crashed and expected not in (out + err)
+        failures += crashed or wrong
         first = (out or err).splitlines()[0][:56] if (out or err) else "(no output)"
-        print(f"    {'CRASH' if crashed else 'ok':6}{label:24}| {first}")
+        verdict = "CRASH" if crashed else "WRONG" if wrong else "ok"
+        print(f"    {verdict:6}{label:26}| {first}")
         if crashed:
             print("           " + err.splitlines()[-1][:108])
+        elif wrong:
+            print(f"           expected to contain {expected!r}")
 
     shutil.rmtree(workdir, ignore_errors=True)
     shutil.rmtree(home, ignore_errors=True)
-    return crashes
+    return failures
 
 
 def build(surface: str, args) -> int:
@@ -401,20 +423,29 @@ def build(surface: str, args) -> int:
     pack(staging, output)
     print(f"  packed  {output.name}  {output.stat().st_size / 1024:.0f} KB")
 
-    crashes = 0
+    failures = 0
     if not args.no_test:
         print("  proving the archive")
-        crashes = prove(output)
-        print(f"    crashes: {crashes}")
+        failures = prove(output)
+        print(f"    failures: {failures}")
 
     if args.keep:
         print(f"  staging kept at {staging}")
     else:
         shutil.rmtree(staging.parent, ignore_errors=True)
-    return 1 if crashes else 0
+    return 1 if failures else 0
 
 
 def main() -> int:
+    # This prints Hebrew and romanized Hebrew, and the maintainer's machine is
+    # Windows, where the console encoding follows the active code page: cp1252
+    # cannot write `ch` with its dot, so reporting a correct result raised
+    # UnicodeEncodeError and took the build down with it. The report is not the
+    # place to lose the characters the whole tool is about.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     parser = argparse.ArgumentParser(description="Build the meturgaman skill packages.")
     parser.add_argument(
         "--surface", choices=(*SURFACES, "both"), default="both",

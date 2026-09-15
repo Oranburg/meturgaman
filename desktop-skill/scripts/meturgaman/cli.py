@@ -1072,6 +1072,39 @@ def _vocalize(arguments) -> int:
 # Wiring
 # ---------------------------------------------------------------------------
 
+
+def _shelf(arguments) -> int:
+    from meturgaman import shelf
+
+    manifest = shelf.load_manifest(arguments.manifest)
+    records, failures = shelf.build_all(manifest, Path(arguments.out),
+                                        write=not arguments.dry_run)
+    if arguments.json:
+        _emit_json({
+            "written": [r.filename for r in records],
+            "failures": failures,
+            "log": [line for r in records for line in r.log],
+        })
+        return 1 if failures else 0
+    verb = "would write" if arguments.dry_run else "wrote"
+    for record in records:
+        print(f"{verb} {record.filename}  <- {record.ref}")
+        for line in record.log:
+            print(f"    note: {line}")
+    for failure in failures:
+        print(f"FAILED {failure}", file=sys.stderr)
+    print(f"{len(records)} of {len(manifest.entries)} {verb} to {arguments.out}")
+    return 1 if failures else 0
+
+
+def _print_pdf(arguments) -> int:
+    from meturgaman import printpdf
+
+    pdf = printpdf.print_pdf(arguments.html, arguments.pdf, browser=arguments.browser)
+    print(f"{pdf}  ({printpdf.pages(pdf)} pages)")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     from meturgaman.sources.sefaria import RETURN_FORMATS
 
@@ -1110,6 +1143,21 @@ def build_parser() -> argparse.ArgumentParser:
                       help="fill missing segments from other versions")
     text.add_argument("--max-editions", type=int, default=12)
     text.set_defaults(handler=_text)
+
+    shelf_cmd = commands.add_parser(
+        "shelf", parents=[machine],
+        help="write LawOS Sources-shelf records from a manifest of refs")
+    shelf_cmd.add_argument("manifest", help="JSON: {saga, project, labelled_by, entries: [{ref, echoes, labelled_translation}]}")
+    shelf_cmd.add_argument("--out", required=True, help="the shelf folder to write into")
+    shelf_cmd.add_argument("--dry-run", action="store_true", help="fetch and build, write nothing")
+    shelf_cmd.set_defaults(handler=_shelf)
+
+    print_cmd = commands.add_parser(
+        "print-pdf", help="print an HTML page to PDF with a headless browser")
+    print_cmd.add_argument("html")
+    print_cmd.add_argument("pdf")
+    print_cmd.add_argument("--browser", help="path to Chrome, Edge or Chromium")
+    print_cmd.set_defaults(handler=_print_pdf)
 
     editions = commands.add_parser("editions", parents=[machine],
                                    help="list every edition of a work")
