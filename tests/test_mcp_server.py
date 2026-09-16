@@ -172,3 +172,53 @@ def test_the_wire_is_utf8_whatever_the_machines_code_page_says():
     payload = json.loads(reply["result"]["content"][0]["text"])
     assert payload["text"] == "qaneya"
     assert ALEPH in " ".join(payload["flags"])
+
+
+@pytest.mark.network
+def test_a_crowded_passage_does_not_arrive_as_a_wall(handshake):
+    """The tools a model calls have to fit in the context it has.
+
+    `links Genesis 1:1` is 1,817 records. Returned whole, with the service's
+    own `_id`, `commentaryNum` and `compDate` on each, that was 1.3 MB --
+    roughly 324,000 tokens for one call, delivered as a wall rather than as an
+    error, so nothing in the transcript would say what went wrong. `chain` on
+    the same verse was 109 KB.
+
+    The caps exist to make the answer readable, so the counts have to be the
+    true ones: a reader shown eight works and told there are sixty-five can
+    ask for the rest, and a reader shown eight and told nothing will count
+    them.
+    """
+    send, proc, _ = handshake
+    send({"jsonrpc": "2.0", "id": 20, "method": "tools/call", "params": {
+        "name": "links", "arguments": {"citation": "Genesis 1:1", "limit": 25},
+    }})
+    payload = json.loads(
+        json.loads(proc.stdout.readline())["result"]["content"][0]["text"]
+    )
+    assert payload["returned"] == 25
+    assert payload["total"] > 1000, "the true total, not the number shown"
+    assert len(payload["links"]) == 25
+    # Trimmed to what a reader uses; the service's internals stay behind.
+    assert set(payload["links"][0]) == {
+        "ref", "work", "category", "type", "anchor"
+    }
+
+    send({"jsonrpc": "2.0", "id": 21, "method": "tools/call", "params": {
+        "name": "chain",
+        "arguments": {
+            "citation": "Genesis 1:1", "works_per_category": 3, "refs_per_work": 2
+        },
+    }})
+    chain = json.loads(
+        json.loads(proc.stdout.readline())["result"]["content"][0]["text"]
+    )
+    commentary = next(
+        group for group in chain["chain"] if group["category"] == "Commentary"
+    )
+    assert commentary["works_shown"] == 3
+    assert commentary["works_total"] > 3
+    assert commentary["count"] > 100, "the category's real ref count"
+    for work in commentary["works"].values():
+        assert len(work["refs"]) <= 2
+        assert work["more"] == work["count"] - len(work["refs"])

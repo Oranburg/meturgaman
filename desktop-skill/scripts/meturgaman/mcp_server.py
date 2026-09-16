@@ -151,24 +151,80 @@ def build_server():
 
     @tool(description=(
         "Everything the tradition built on a passage, in transmission order: "
-        "Tanakh through Mishnah, Talmud, commentary, codes, responsa."
+        "Tanakh through Mishnah, Talmud, commentary, codes, responsa. Busiest "
+        "works first, capped per category, with every true count reported so "
+        "a capped answer says what it left out."
     ))
-    def chain(citation: str) -> dict:
+    def chain(
+        citation: str, works_per_category: int = 8, refs_per_work: int = 5
+    ) -> dict:
         from meturgaman.chain import chain as build_chain
 
         normalized, groups = build_chain(citation)
-        return _plain({"ref": normalized, "chain": groups})
+        shaped = []
+        for group in groups:
+            # Busiest work first, so a cap keeps what a reader would have
+            # looked at rather than whatever the graph happened to list first.
+            ordered = sorted(
+                group.works.items(), key=lambda item: (-len(item[1]), item[0])
+            )
+            kept_works = (
+                ordered[:works_per_category] if works_per_category > 0 else ordered
+            )
+            works = {}
+            for work, refs in kept_works:
+                kept = refs[:refs_per_work] if refs_per_work > 0 else refs
+                works[work] = {
+                    "count": len(refs),
+                    "refs": kept,
+                    "more": max(0, len(refs) - len(kept)),
+                }
+            shaped.append({
+                "category": group.category,
+                # Every count is the true one. The chain's value is its shape
+                # -- which categories, which works, how many in each -- and a
+                # reader told 65 and shown 8 can ask for the rest, where a
+                # reader shown 8 and told nothing would count them.
+                "works_total": len(group.works),
+                "works_shown": len(works),
+                "count": group.count,
+                "works": works,
+            })
+        return _plain({"ref": normalized, "chain": shaped})
 
     @tool(description=(
-        "Raw link records for a passage, optionally filtered by Sefaria "
-        "category such as Commentary or Halakhah."
+        "Link records for a passage, optionally filtered by Sefaria category "
+        "such as Commentary or Halakhah. Returns the newest `limit` of them "
+        "and always reports the true total, so a capped answer says so."
     ))
-    def links(citation: str, category: str = "") -> dict:
+    def links(citation: str, category: str = "", limit: int = 50) -> dict:
         from meturgaman.sources import sefaria
 
         ref = sefaria.resolve(citation)
         found = sefaria.links(ref, categories=[category] if category else None)
-        return _plain({"ref": ref.normalized, "links": found})
+        kept = found[:limit] if limit > 0 else found
+        return _plain({
+            "ref": ref.normalized,
+            "total": len(found),
+            "returned": len(kept),
+            "links": [
+                # The service's own record carries `_id`, `commentaryNum`,
+                # `compDate` and several booleans that mean something to
+                # Sefaria's front end and nothing to a reader. Uncapped and
+                # untrimmed, Genesis 1:1 answered with 1,817 records and 1.3 MB
+                # -- around 324,000 tokens, which no model has room for and
+                # which arrived as a wall rather than as an error.
+                {
+                    "ref": record.get("ref"),
+                    "work": record.get("index_title"),
+                    "category": record.get("category"),
+                    "type": record.get("type"),
+                    "anchor": record.get("anchorRef"),
+                }
+                for record in kept
+                if isinstance(record, dict)
+            ],
+        })
 
     @tool(description=(
         "Romanize Hebrew under a published standard. Flags travel in the "
