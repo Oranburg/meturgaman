@@ -242,9 +242,17 @@ def build_server():
         "cycles, each with a fetchable reference."
     ), annotations=read_only)
     def calendars(date: str = "", israel: bool = False) -> dict:
+        from mcp.server.mcpserver.exceptions import ToolError
+
         from meturgaman.sources import sefaria
 
-        return _plain(sefaria.calendars(date=date, diaspora=not israel))
+        # SDK 2.2 masks any exception other than ToolError as a bare
+        # "Error executing tool calendars", so a refused date must be
+        # re-raised as ToolError for the client to see why.
+        try:
+            return _plain(sefaria.calendars(date=date, diaspora=not israel))
+        except ValueError as error:
+            raise ToolError(str(error)) from error
 
     return server
 
