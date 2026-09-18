@@ -417,3 +417,16 @@ The tanach.us reader, translation beyond retrieval of published
 translations, and a web interface. Sefaria also runs hosted MCP servers at
 `https://mcp.sefaria.org/sse` and `https://developers.sefaria.org/mcp`; they
 need a paid account, which is why this tool does not depend on them.
+
+## The Claude Code skill on a machine
+
+The claude.ai account sync carries `SKILL.md` alone, so a session reading the
+synced copy is told to run scripts and consult references that are not there.
+Install the machine's own copy instead, which drives the installed
+`meturgaman` command:
+
+    python3 tools/install_code_skill.py --write   # into ~/.claude/skills/meturgaman
+    ln -sf "$(pwd)/.venv/bin/meturgaman" ~/.local/bin/meturgaman
+
+Run the installer again after pulling; it prints what would change and writes
+only with `--write`.
