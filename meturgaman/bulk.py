@@ -73,7 +73,17 @@ def slug(text: str) -> str:
 
 
 def is_free_licence(licence: str) -> bool:
-    text = (licence or "").lower()
+    """Free to copy for study: public domain, CC0 or a CC-BY family licence.
+
+    A no-derivatives licence (CC-BY-NC-ND) is not free here, because a reading
+    file that layers versions is a derivative. Sefaria writes some public-domain
+    versions as the bare "PD", which the token list alone missed.
+    """
+    text = (licence or "").strip().lower()
+    if "-nd" in text or "noderiv" in text or "no deriv" in text:
+        return False
+    if re.fullmatch(r"pd\.?", text):
+        return True
     return any(token in text for token in FREE_LICENCE_TOKENS)
 
 
@@ -288,7 +298,10 @@ def _wanted(version: VersionInfo, selectors: Iterable[str]) -> bool:
         return True
     for text in chosen:
         if "|" in text:
-            if text.lower() == version.request_name.lower():
+            # Sefaria titles can end in a space ("Yemenite Taj "); compare each
+            # side of the selector trimmed, so a typed title still matches.
+            want_lang, _, want_title = (part.strip().lower() for part in text.partition("|"))
+            if (want_lang, want_title) == (version.language.strip().lower(), version.title.strip().lower()):
                 return True
         elif text.lower() in (version.title.lower(), version.language.lower(),
                               version.family.lower(), version.actual_language.lower()):

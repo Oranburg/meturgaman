@@ -121,3 +121,11 @@ def test_one_title_in_two_languages_stays_two_files(tmp_path):
     assert [(row["language"], row["segments"]) for row in manifest["versions"]] == [
         ("en", 1), ("he", 1)]
     assert all(row["complete_against_shape"] for row in manifest["versions"])
+
+
+def test_no_derivatives_is_not_free_and_bare_pd_is():
+    assert not bulk.is_free_licence("CC-BY-NC-ND")
+    assert bulk.is_free_licence("PD")
+    assert bulk.is_free_licence("Public Domain")
+    assert bulk.is_free_licence("CC-BY-SA")
+    assert not bulk.is_free_licence("unknown")
